@@ -29,13 +29,27 @@ import database
 from analyzer import analyze_food_label, extract_text_from_image
 from sample_data import SAMPLE_PRODUCTS
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+IS_SERVERLESS = (
+    os.environ.get("VERCEL") is not None
+    or os.environ.get("VERCEL_ENV") is not None
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") is not None
+    or os.environ.get("LAMBDA_TASK_ROOT") is not None
+    or os.path.exists("/var/task")
+)
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
 app.secret_key = os.environ.get("SECRET_KEY", "label-lens-super-secure-key-2026")
 
-if os.environ.get("VERCEL"):
+if IS_SERVERLESS:
     UPLOAD_FOLDER = "/tmp/uploads"
 else:
-    UPLOAD_FOLDER = os.path.join(app.root_path, "static", "uploads")
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -68,6 +82,8 @@ def inject_user_and_samples():
 # -------------------------------------------------------------
 
 @app.route("/")
+@app.route("/api")
+@app.route("/api/index")
 def index():
     return render_template("index.html")
 

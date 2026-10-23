@@ -9,9 +9,16 @@ import json
 import shutil
 from datetime import datetime
 
-# Vercel serverless environment has a read-only root filesystem.
-# Store the SQLite database in /tmp when running on Vercel.
-if os.environ.get("VERCEL"):
+# Serverless detection (Vercel, AWS Lambda, or read-only container)
+IS_SERVERLESS = (
+    os.environ.get("VERCEL") is not None
+    or os.environ.get("VERCEL_ENV") is not None
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") is not None
+    or os.environ.get("LAMBDA_TASK_ROOT") is not None
+    or os.path.exists("/var/task")
+)
+
+if IS_SERVERLESS:
     DB_PATH = "/tmp/label_lens.db"
     BUNDLED_DB = os.path.join(os.path.dirname(__file__), "label_lens.db")
     if not os.path.exists(DB_PATH) and os.path.exists(BUNDLED_DB):
