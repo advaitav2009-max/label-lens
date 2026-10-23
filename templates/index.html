@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}LabelLens - Know what’s inside. Choose what’s right.{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 3.5rem;">
+  <!-- Hero Section -->
+  <div class="card" style="background: linear-gradient(135deg, #0E1526 0%, #111A30 50%, #0A101D 100%); border: 1px solid var(--border-blue); padding: 3.5rem 2.5rem; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); position: relative; overflow: hidden;">
+    <div style="max-width: 740px; position: relative; z-index: 2;">
+      <h1 style="font-size: 2.8rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.25rem; letter-spacing: -1px; color: var(--text-primary);">
+        Know what’s inside. Choose what’s right.
+      </h1>
+      <p style="font-size: 1.15rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">
+        Scan food labels, check ingredients and find what suits your needs
+      </p>
+
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{{ url_for('scan') }}" class="btn btn-primary btn-lg">
+          Scan Food Label
+        </a>
+        <a href="{{ url_for('compare') }}" class="btn btn-secondary btn-lg">
+          Compare Products
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reference Products Section (Maggi, Kellogg's, etc.) -->
+<div style="margin-bottom: 3.5rem;">
+  <div style="margin-bottom: 1.25rem;">
+    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.4px;">Sample Product Evaluations</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted);">See how everyday products are analyzed for ingredients, allergens, and additives:</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+    {% for sample in samples %}
+      <div class="card" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: var(--radius-md);">
+        <div>
+          <div style="height: 110px; background-color: var(--bg-canvas); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; margin-bottom: 0.85rem; overflow: hidden;">
+            <img src="{{ sample.image_url }}" alt="{{ sample.product_name }}" style="max-height: 90px; max-width: 85%; object-fit: contain;">
+          </div>
+          <span class="badge badge-grey" style="font-size: 0.7rem; margin-bottom: 0.4rem;">{{ sample.category }}</span>
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; line-height: 1.35;">{{ sample.product_name }}</h4>
+        </div>
+        <form action="{{ url_for('analyze_sample') }}" method="POST" style="margin-top: 1rem;">
+          <input type="hidden" name="sample_id" value="{{ sample.id }}">
+          <button type="submit" class="btn btn-outline-blue btn-sm" style="width: 100%;">
+            Evaluate Sample
+          </button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- How LabelLens Works -->
+<div style="margin-bottom: 3.5rem;">
+  <div style="text-align: center; max-width: 600px; margin: 0 auto 2.25rem auto;">
+    <h2 style="font-size: 1.75rem; font-weight: 800; color: var(--text-primary); margin-top: 0.5rem; letter-spacing: -0.4px;">
+      How LabelLens Works
+    </h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+    <div class="card" style="border-top: 3px solid var(--blue-500);">
+      <span style="font-size: 0.75rem; font-weight: 700; color: var(--blue-400); text-transform: uppercase; letter-spacing: 0.5px;">Phase 01</span>
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0.35rem 0 0.5rem 0;">Scan the Label</h3>
+      <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+        Capture a food label using your webcam or phone camera to get started.
+      </p>
+    </div>
+
+    <div class="card" style="border-top: 3px solid var(--blue-400);">
+      <span style="font-size: 0.75rem; font-weight: 700; color: var(--blue-400); text-transform: uppercase; letter-spacing: 0.5px;">Phase 02</span>
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0.35rem 0 0.5rem 0;">Read the Ingredients</h3>
+      <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+        Extract ingredient details from the packaging and identify important additives and INS codes.
+      </p>
+    </div>
+
+    <div class="card" style="border-top: 3px solid var(--safe-text);">
+      <span style="font-size: 0.75rem; font-weight: 700; color: var(--safe-text); text-transform: uppercase; letter-spacing: 0.5px;">Phase 03</span>
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0.35rem 0 0.5rem 0;">Check Your Preferences</h3>
+      <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+        Compare ingredients with your allergies, dietary preferences, and food restrictions.
+      </p>
+    </div>
+
+    <div class="card" style="border-top: 3px solid var(--caution-text);">
+      <span style="font-size: 0.75rem; font-weight: 700; color: var(--caution-text); text-transform: uppercase; letter-spacing: 0.5px;">Phase 04</span>
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0.35rem 0 0.5rem 0;">Get Your Results</h3>
+      <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+        Receive a rating out of 5, a clear ingredient summary, and price comparisons to help you make informed choices.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Food labels made clearer -->
+<div class="card" style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 2.75rem; border-radius: var(--radius-xl);">
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2.5rem; align-items: center;">
+    <div>
+      <h2 style="font-size: 1.95rem; font-weight: 800; color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.25; letter-spacing: -0.5px;">
+        Food labels made clearer.
+      </h2>
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div style="padding-left: 1rem; border-left: 2px solid var(--blue-500);">
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">Scan Labels with Your Camera</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Use your webcam or phone camera to scan packaged food labels and read small ingredient text.
+          </p>
+        </div>
+        <div style="padding-left: 1rem; border-left: 2px solid var(--blue-500);">
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">Understand Food Additives</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Learn more about INS codes, preservatives, colours, and other additives.
+          </p>
+        </div>
+        <div style="padding-left: 1rem; border-left: 2px solid var(--blue-500);">
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">Compare Similar Products</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Compare two products to see how their ingredients, dietary compatibility, and prices differ.
+          </p>
+        </div>
+        <div style="padding-left: 1rem; border-left: 2px solid var(--blue-500);">
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">Know the Cost per Serving</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Calculate the cost of each serving to make smarter choices within your budget.
+          </p>
+        </div>
+      </div>
+      <div style="margin-top: 2rem;">
+        <a href="{{ url_for('scan') }}" class="btn btn-primary btn-lg">Open Scanner</a>
+      </div>
+    </div>
+    
+    <div>
+      <div class="card" style="background-color: var(--bg-surface); padding: 1.85rem; border-radius: var(--radius-lg); border: 1px solid var(--border-strong);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+          <span class="badge badge-grey">Sample Analysis</span>
+          <div style="font-size: 0.95rem; font-weight: 800; color: var(--safe-text); font-family: var(--font-mono);">
+            4.8 / 5 · LabelLens Rating
+          </div>
+        </div>
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.35rem;">Organic Rolled Oats & Seeds</h3>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Suitable for the selected dietary preferences.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem;">
+          <div class="breakdown-item safe" style="font-size: 0.85rem;">
+            <strong>Added sugars:</strong> None detected in the extracted ingredient list
+          </div>
+          <div class="breakdown-item safe" style="font-size: 0.85rem;">
+            <strong>Additives:</strong> No listed additives detected
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: var(--text-secondary); border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
+          <span>Cost per serving:</span>
+          <strong style="color: var(--text-primary);">₹22.00</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

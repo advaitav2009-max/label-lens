@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="card" style="padding: 2.25rem;">
+    <div style="margin-bottom: 2rem;">
+      <h1 class="card-title" style="font-size: 1.85rem;">Your food preferences</h1>
+      <p class="card-subtitle">Set your preferences to get more personalised product comparisons.</p>
+    </div>
+
+    <form action="{{ url_for('register') }}" method="POST">
+      <!-- Section 1: Account Credentials -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">Account Credentials</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control" placeholder="username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" placeholder="email@domain.com" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" minlength="6" required>
+        </div>
+      </div>
+
+      <!-- Section 2: Dietary Lifestyle (Jain removed) -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Dietary Preference</h3>
+        <div class="chip-grid">
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Vegetarian">
+            <span class="chip-box">Vegetarian</span>
+          </label>
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Vegan">
+            <span class="chip-box">Vegan</span>
+          </label>
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Non-Vegetarian" checked>
+            <span class="chip-box">Non-Vegetarian</span>
+          </label>
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Pescatarian">
+            <span class="chip-box">Pescatarian</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 3: Medical Allergens (Checkboxes + Typed input) -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Medical Allergens & Sensitivities</h3>
+        <p class="form-text" style="margin-bottom: 0.75rem;">Select common allergens or type custom medical triggers below:</p>
+        <div class="chip-grid">
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="peanuts">
+            <span class="chip-box">Peanuts / Groundnuts</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="tree_nuts">
+            <span class="chip-box">Tree Nuts (Almonds, Cashews, Walnuts)</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="milk">
+            <span class="chip-box">Milk / Dairy / Lactose</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="wheat">
+            <span class="chip-box">Wheat / Gluten (Celiac)</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="soy">
+            <span class="chip-box">Soy / Soya Lecithin</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="eggs">
+            <span class="chip-box">Eggs</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="fish">
+            <span class="chip-box">Fish</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="shellfish">
+            <span class="chip-box">Shellfish / Crustaceans</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="sesame">
+            <span class="chip-box">Sesame</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="sulfites">
+            <span class="chip-box">Sulfites (INS 220-228)</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="mustard">
+            <span class="chip-box">Mustard</span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+          <label class="form-label" for="custom_allergies">Other Medical Allergens or Intolerances (Type here)</label>
+          <input type="text" id="custom_allergies" name="custom_allergies" class="form-control" placeholder="e.g. strawberries, corn, kiwi, red dye, celery">
+          <p class="form-text">Comma-separated list of any additional specific medical allergies.</p>
+        </div>
+      </div>
+
+      <!-- Section 4: Nutritional Objectives (Checkboxes + Typed input) -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Nutritional Objectives</h3>
+        <div class="chip-grid">
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="reduced_sugar">
+            <span class="chip-box">Reduced Sugar / Low Glycemic</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="increased_protein">
+            <span class="chip-box">Increased Protein / Fitness</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="low_sodium">
+            <span class="chip-box">Low Sodium / Blood Pressure</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="clean_eating">
+            <span class="chip-box">Clean Formulation (Zero Synthetic Additives)</span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+          <label class="form-label" for="custom_goals">Other Nutritional Goals (Type here)</label>
+          <input type="text" id="custom_goals" name="custom_goals" class="form-control" placeholder="e.g. low carb, high fiber, gluten free, low calorie">
+        </div>
+      </div>
+
+      <!-- Section 5: Specific Avoid List -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="avoid_items">Specific Ingredients to Avoid (comma-separated)</label>
+          <input type="text" id="avoid_items" name="avoid_items" class="form-control" placeholder="e.g. palm oil, high fructose corn syrup, msg, aspartame">
+        </div>
+      </div>
+
+      <!-- Section 6: Currency & Optional Budget per serving -->
+      <div style="margin-bottom: 2rem;">
+        <div class="form-group">
+          <label class="form-label" for="currency">Preferred currency</label>
+          <select id="currency" name="currency" class="form-select">
+            <option value="₹" selected>₹ Indian Rupee (INR)</option>
+            <option value="$">$ US Dollar (USD)</option>
+            <option value="€">€ Euro (EUR)</option>
+            <option value="£">£ British Pound (GBP)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="budget_target">Budget per serving (optional)</label>
+          <input type="number" id="budget_target" name="budget_target" class="form-control" placeholder="e.g. 50" min="1" step="any">
+          <p class="form-text">Used to compare prices and suggest affordable alternatives. You can skip this and set a budget when comparing products.</p>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+        Save Preferences & Continue
+      </button>
+
+      <div style="text-align: center; margin-top: 1.25rem;">
+        <span style="font-size: 0.88rem; color: var(--text-muted);">Existing user?</span>
+        <a href="{{ url_for('login') }}" style="font-size: 0.88rem; font-weight: 700; margin-left: 0.25rem;">Sign in</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

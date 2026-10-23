@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Multi-Product Comparison Matrix - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+  <div style="margin-bottom: 2.25rem; text-align: center;">
+    <span class="badge badge-blue" style="margin-bottom: 0.5rem;">Multi-Product Analysis</span>
+    <h1 class="card-title" style="font-size: 2.2rem; margin-bottom: 0.5rem;">Product Comparison Matrix</h1>
+    <p class="card-subtitle" style="max-width: 680px; margin: 0 auto;">
+      Select two, three, or more food products to compare formulations, additives, allergens, and cost per serving simultaneously.
+    </p>
+  </div>
+
+  <!-- Multi-Product Selector Form -->
+  <div class="card" style="margin-bottom: 2rem; padding: 1.5rem; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);">
+    <form action="{{ url_for('compare') }}" method="GET">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+          Select Products to Compare (Check any 2 or more):
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Update Comparison Matrix
+        </button>
+      </div>
+
+      <div class="chip-grid" style="gap: 0.6rem;">
+        {% for item in all_scans %}
+          <label class="chip-label">
+            <input type="checkbox" name="prod" value="{{ item.id }}" {% if item.id in selected_ids %}checked{% endif %} onchange="this.form.submit()">
+            <span class="chip-box" style="font-size: 0.82rem;">
+              {{ item.product_name }} ({{ item.star_rating }} / 5.0)
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+
+  {% if products and products|length > 0 %}
+    <!-- Summary Winner Banner if more than 1 product -->
+    {% if optimal_product and products|length > 1 %}
+      <div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--safe-text); padding: 1.5rem; background: linear-gradient(to right, rgba(16, 185, 129, 0.08), var(--bg-surface));">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--safe-text); text-transform: uppercase; letter-spacing: 0.5px;">
+            Optimal Recommendation: {{ optimal_product.product_name }}
+          </h3>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+          Among the <strong>{{ products|length }}</strong> compared items, <strong>{{ optimal_product.product_name }}</strong> exhibits the highest nutritional rating at <strong>{{ optimal_product.star_rating }} / 5.0</strong> with minimal ultra-processed additives.
+          {% if optimal_product.cost_per_serving > 0 %}
+            Normalized cost: {{ current_user.currency if current_user else '₹' }}{{ "%.2f"|format(optimal_product.cost_per_serving) }} per portion.
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+
+    <!-- Flexible Dynamic Comparison Grid (Scales with 2, 3, 4+ products) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem;">
+      {% for p in products %}
+        {% set p_analysis = p.analysis %}
+        {% set is_optimal = (optimal_product and p.id == optimal_product.id and products|length > 1) %}
+
+        <div class="comparison-card {% if is_optimal %}winner{% endif %}" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            {% if is_optimal %}
+              <div class="winner-banner">Optimal Formulation</div>
+            {% endif %}
+            
+            <div style="margin-bottom: 0.75rem;">
+              <span class="badge badge-grey">{{ p.category }}</span>
+              <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 0.35rem 0 0.2rem 0; line-height: 1.3;">
+                {{ p.product_name }}
+              </h2>
+              <div style="font-size: 1.35rem; font-weight: 900; color: var(--text-primary); font-family: var(--font-mono);">
+                {{ p.star_rating }} <span style="font-size: 0.8rem; color: var(--text-dim); font-weight: 500;">/ 5.0</span>
+              </div>
+              <span class="badge badge-{{ p.verdict_badge }}" style="margin-top: 0.35rem;">
+                {{ p.verdict }}
+              </span>
+            </div>
+
+            <!-- Portion Economics -->
+            <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 0.75rem 0.95rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px;">Portion Economics</div>
+              {% if p.cost_per_serving and p.cost_per_serving > 0 %}
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">
+                  {{ current_user.currency if current_user else '₹' }}{{ "%.2f"|format(p.cost_per_serving) }}
+                  <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-dim);">/ serving</span>
+                </div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">
+                  Retail: {{ current_user.currency if current_user else '₹' }}{{ "%.2f"|format(p.packet_price) }} ({{ p.servings|int if p.servings == p.servings|int else p.servings }} portions)
+                </div>
+              {% else %}
+                <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-dim); margin-top: 0.2rem;">
+                  Not specified
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-dim);">
+                  Price or portion count omitted on packaging
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Evaluation Criteria Rows -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+              <div class="breakdown-item {% if p_analysis.user_allergen_warnings %}danger{% else %}safe{% endif %}" style="padding: 0.55rem 0.75rem;">
+                <strong>Allergens:</strong>
+                {% if p_analysis.user_allergen_warnings %}
+                  Conflict: {{ p_analysis.user_allergen_warnings|join(', ') }}
+                {% else %}
+                  Zero profile conflicts
+                {% endif %}
+              </div>
+
+              <div class="breakdown-item {% if p_analysis.detected_sugars|length >= 2 %}danger{% elif p_analysis.detected_sugars %}caution{% else %}safe{% endif %}" style="padding: 0.55rem 0.75rem;">
+                <strong>Added Sugars:</strong>
+                {% if p_analysis.detected_sugars %}
+                  {{ p_analysis.detected_sugars|length }} type(s) ({{ p_analysis.detected_sugars|join(', ') }})
+                {% else %}
+                  0 added sugar synonyms
+                {% endif %}
+              </div>
+
+              <div class="breakdown-item {% if p_analysis.detected_fats %}caution{% else %}safe{% endif %}" style="padding: 0.55rem 0.75rem;">
+                <strong>Industrial Lipids:</strong>
+                {% if p_analysis.detected_fats %}
+                  {{ p_analysis.detected_fats|join(', ') }}
+                {% else %}
+                  Zero palm/hydrogenated fats
+                {% endif %}
+              </div>
+
+              <div class="breakdown-item" style="padding: 0.55rem 0.75rem;">
+                <strong>INS Additives:</strong>
+                {{ p_analysis.detected_additives|length }} identified ({{ p_analysis.detected_additives|map(attribute='code')|join(', ') or 'None' }})
+              </div>
+
+              <div class="breakdown-item safe" style="padding: 0.55rem 0.75rem;">
+                <strong>Beneficial:</strong>
+                {{ p_analysis.detected_beneficial|join(', ') or 'None identified' }}
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle);">
+            <a href="{{ url_for('view_scan', scan_id=p.id) }}" class="btn btn-secondary btn-sm" style="width: 100%;">
+              View Full Report
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card" style="text-align: center; padding: 3rem 1.5rem;">
+      <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Select Products to Display</h3>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Check any two or more products from the list above to populate the side-by-side comparison matrix.
+      </p>
+    </div>
+  {% endif %}
+
+  <!-- Upload Another Contender -->
+  <div class="card" style="padding: 2.25rem;">
+    <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.4rem; letter-spacing: -0.3px;">
+      Evaluate Additional Alternate Product
+    </h3>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+      Scan another package to test formulation quality against existing contenders.
+    </p>
+    <a href="{{ url_for('scan') }}" class="btn btn-primary">
+      Open Scanner
+    </a>
+  </div>
+</div>
+{% endblock %}

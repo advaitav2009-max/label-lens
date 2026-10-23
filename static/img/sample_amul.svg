@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="amulGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#CA8A04" />
+      <stop offset="100%" stop-color="#A16207" />
+    </linearGradient>
+  </defs>
+  <rect x="30" y="40" width="140" height="160" rx="10" fill="url(#amulGrad)" stroke="#FACC15" stroke-width="1.5"/>
+  <rect x="42" y="60" width="116" height="40" rx="4" fill="#DC2626"/>
+  <text x="100" y="85" font-family="'Inter', sans-serif" font-weight="900" font-size="16" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">Amul</text>
+  <text x="100" y="96" font-family="'Inter', sans-serif" font-size="7.5" fill="#FEF08A" text-anchor="middle">BUTTER</text>
+  <rect x="45" y="115" width="110" height="36" rx="6" fill="#FEF9C3" stroke="#FBBF24" stroke-width="1.5"/>
+  <text x="100" y="132" font-family="'Inter', sans-serif" font-weight="700" font-size="8.5" fill="#713F12" text-anchor="middle">PASTEURISED</text>
+  <text x="100" y="143" font-family="'Inter', sans-serif" font-size="7" fill="#854D0E" text-anchor="middle">Butterfat 80% · Salt 2.5%</text>
+  <rect x="42" y="165" width="116" height="22" rx="3" fill="#0F172A" opacity="0.8"/>
+  <text x="100" y="179" font-family="'Inter', sans-serif" font-size="7.5" fill="#93C5FD" text-anchor="middle">Allergen: Contains Milk</text>
+</svg>

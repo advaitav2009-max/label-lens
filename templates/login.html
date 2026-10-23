@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 440px; margin: 2.5rem auto;">
+  <div class="card" style="padding: 2.5rem;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="width: 44px; height: 44px; margin: 0 auto 0.85rem auto;">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Label Lens" style="width: 100%; height: 100%;">
+      </div>
+      <h1 class="card-title" style="font-size: 1.6rem;">Account Access</h1>
+      <p class="card-subtitle">Authenticate to access saved product audits and personalized allergen filters.</p>
+    </div>
+
+    <form action="{{ url_for('login') }}" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="username">Username or Email</label>
+        <input type="text" id="username" name="username" class="form-control" placeholder="username or email" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 0.75rem;">
+        Authenticate
+      </button>
+
+      <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle);">
+        <span style="font-size: 0.88rem; color: var(--text-muted);">Need an account?</span>
+        <a href="{{ url_for('register') }}" style="font-size: 0.88rem; font-weight: 700; margin-left: 0.25rem;">Create profile</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

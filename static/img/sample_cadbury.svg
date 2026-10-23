@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cadburyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4C1D95" />
+      <stop offset="100%" stop-color="#2E1065" />
+    </linearGradient>
+  </defs>
+  <rect x="35" y="25" width="130" height="190" rx="10" fill="url(#cadburyGrad)" stroke="#7C3AED" stroke-width="1.5"/>
+  <rect x="45" y="45" width="110" height="30" rx="4" fill="#581C87"/>
+  <text x="100" y="65" font-family="'Inter', sans-serif" font-weight="900" font-size="12" fill="#E9D5FF" text-anchor="middle" font-style="italic">Cadbury</text>
+  <rect x="45" y="85" width="110" height="26" rx="4" fill="#F8FAFC"/>
+  <text x="100" y="102" font-family="'Inter', sans-serif" font-weight="900" font-size="9" fill="#4C1D95" text-anchor="middle" letter-spacing="0.5">DAIRY MILK</text>
+  <circle cx="85" cy="135" r="12" fill="#F8FAFC"/>
+  <circle cx="115" cy="135" r="12" fill="#F8FAFC"/>
+  <path d="M85 142 Q100 155 115 142" stroke="#4C1D95" stroke-width="2" fill="none"/>
+  <rect x="42" y="165" width="116" height="36" rx="3" fill="#0F172A" opacity="0.8"/>
+  <text x="100" y="179" font-family="'Inter', sans-serif" font-size="7.5" fill="#E2E8F0" text-anchor="middle">Sugar · Milk Solids 16%</text>
+  <text x="100" y="191" font-family="'Inter', sans-serif" font-size="7" fill="#FCA5A5" text-anchor="middle">Emulsifiers (INS 442, 476)</text>
+</svg>

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Your food preferences - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="card" style="padding: 2.25rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 class="card-title" style="font-size: 1.85rem;">Your food preferences</h1>
+        <p class="card-subtitle">Set your preferences to get more personalised product comparisons.</p>
+      </div>
+      <div class="nav-user-badge" style="padding: 0.45rem 0.95rem; font-size: 0.9rem;">
+        <span class="nav-avatar">{{ current_user.username[0]|upper }}</span>
+        <span>{{ current_user.username }}</span>
+      </div>
+    </div>
+
+    <form action="{{ url_for('profile') }}" method="POST">
+      <!-- Section 1: Dietary Lifestyle -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Dietary Preference</h3>
+        <div class="chip-grid">
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Vegetarian" {% if current_user.dietary_preference == 'Vegetarian' %}checked{% endif %}>
+            <span class="chip-box">Vegetarian</span>
+          </label>
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Vegan" {% if current_user.dietary_preference == 'Vegan' %}checked{% endif %}>
+            <span class="chip-box">Vegan</span>
+          </label>
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Non-Vegetarian" {% if current_user.dietary_preference == 'Non-Vegetarian' %}checked{% endif %}>
+            <span class="chip-box">Non-Vegetarian</span>
+          </label>
+          <label class="chip-label">
+            <input type="radio" name="dietary_preference" value="Pescatarian" {% if current_user.dietary_preference == 'Pescatarian' %}checked{% endif %}>
+            <span class="chip-box">Pescatarian</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section 2: Medical Allergens (Options + Typed) -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Medical Allergens & Sensitivities</h3>
+        <p class="form-text" style="margin-bottom: 0.75rem;">Selected or typed allergens produce immediate warning alerts.</p>
+        <div class="chip-grid">
+          {% set user_al = current_user.allergies %}
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="peanuts" {% if 'peanuts' in user_al %}checked{% endif %}>
+            <span class="chip-box">Peanuts / Groundnuts</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="tree_nuts" {% if 'tree_nuts' in user_al %}checked{% endif %}>
+            <span class="chip-box">Tree Nuts (Almonds, Cashews, Walnuts)</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="milk" {% if 'milk' in user_al %}checked{% endif %}>
+            <span class="chip-box">Milk / Dairy / Lactose</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="wheat" {% if 'wheat' in user_al %}checked{% endif %}>
+            <span class="chip-box">Wheat / Gluten</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="soy" {% if 'soy' in user_al %}checked{% endif %}>
+            <span class="chip-box">Soy</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="eggs" {% if 'eggs' in user_al %}checked{% endif %}>
+            <span class="chip-box">Eggs</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="fish" {% if 'fish' in user_al %}checked{% endif %}>
+            <span class="chip-box">Fish</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="shellfish" {% if 'shellfish' in user_al %}checked{% endif %}>
+            <span class="chip-box">Shellfish</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="sesame" {% if 'sesame' in user_al %}checked{% endif %}>
+            <span class="chip-box">Sesame</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="sulfites" {% if 'sulfites' in user_al %}checked{% endif %}>
+            <span class="chip-box">Sulfites (INS 220-228)</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="allergies" value="mustard" {% if 'mustard' in user_al %}checked{% endif %}>
+            <span class="chip-box">Mustard</span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+          <label class="form-label" for="custom_allergies">Other Medical Allergens or Intolerances (Type here)</label>
+          <input type="text" id="custom_allergies" name="custom_allergies" class="form-control" value="{{ current_user.custom_allergies|join(', ') if current_user.custom_allergies else '' }}" placeholder="e.g. strawberries, corn, kiwi, red dye, celery">
+        </div>
+      </div>
+
+      <!-- Section 3: Health Goals (Options + Typed) -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">Nutritional Objectives</h3>
+        {% set user_gl = current_user.health_goals %}
+        <div class="chip-grid">
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="reduced_sugar" {% if 'reduced_sugar' in user_gl %}checked{% endif %}>
+            <span class="chip-box">Reduced Sugar</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="increased_protein" {% if 'increased_protein' in user_gl %}checked{% endif %}>
+            <span class="chip-box">Increased Protein</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="low_sodium" {% if 'low_sodium' in user_gl %}checked{% endif %}>
+            <span class="chip-box">Low Sodium</span>
+          </label>
+          <label class="chip-label">
+            <input type="checkbox" name="health_goals" value="clean_eating" {% if 'clean_eating' in user_gl %}checked{% endif %}>
+            <span class="chip-box">Clean Formulation</span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+          <label class="form-label" for="custom_goals">Other Nutritional Goals (Type here)</label>
+          <input type="text" id="custom_goals" name="custom_goals" class="form-control" value="{{ current_user.custom_goals|join(', ') if current_user.custom_goals else '' }}" placeholder="e.g. low carb, high fiber, gluten free, low calorie">
+        </div>
+      </div>
+
+      <!-- Section 4: Avoid Items -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1.25rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="avoid_items">Specific Ingredients to Avoid (comma-separated)</label>
+          <input type="text" id="avoid_items" name="avoid_items" class="form-control" value="{{ current_user.avoid_items|join(', ') }}">
+        </div>
+      </div>
+
+      <!-- Section 5: Currency & Optional Budget per serving -->
+      <div style="margin-bottom: 2rem;">
+        <div class="form-group">
+          <label class="form-label" for="currency">Preferred currency</label>
+          <select id="currency" name="currency" class="form-select">
+            <option value="₹" {% if current_user.currency == '₹' %}selected{% endif %}>₹ Indian Rupee (INR)</option>
+            <option value="$" {% if current_user.currency == '$' %}selected{% endif %}>$ US Dollar (USD)</option>
+            <option value="€" {% if current_user.currency == '€' %}selected{% endif %}>€ Euro (EUR)</option>
+            <option value="£" {% if current_user.currency == '£' %}selected{% endif %}>£ British Pound (GBP)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="budget_target">Budget per serving (optional)</label>
+          <input type="number" id="budget_target" name="budget_target" class="form-control" value="{{ current_user.budget_target if current_user.budget_target is not none else '' }}" placeholder="e.g. 50" min="1" step="any">
+          <p class="form-text">Used to compare prices and suggest affordable alternatives. You can skip this and set a budget when comparing products.</p>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+        Update Preferences
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}Label Scanner - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 840px; margin: 0 auto;">
+  <div class="card" style="padding: 2.25rem;">
+    <!-- Header -->
+    <div style="margin-bottom: 1.5rem;">
+      <span class="badge badge-blue" style="margin-bottom: 0.4rem;">Scanner</span>
+      <h1 class="card-title" style="font-size: 1.85rem;">Food Package Scanner</h1>
+      <p class="card-subtitle">
+        Capture single or multiple photos to cover the entire packaging (ingredients panel, nutrition table, and front label).
+      </p>
+    </div>
+
+    <!-- Quick Sample Selector Pills -->
+    <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.75rem;">
+      <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 0.5rem;">
+        Reference Samples:
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        {% for sample in samples %}
+          <button type="button" class="btn btn-secondary btn-sm sample-product-pill"
+                  data-name="{{ sample.product_name }}"
+                  data-category="{{ sample.category }}"
+                  data-price="{{ sample.packet_price }}"
+                  data-servings="{{ sample.servings }}"
+                  data-ingredients="{{ sample.raw_text }}">
+            {{ sample.product_name }}
+          </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Scanner Tabs -->
+    <div class="scanner-modes">
+      <button type="button" class="tab-btn active" data-target="camera-panel">
+        Camera / Phone Cam (Iriun)
+      </button>
+      <button type="button" class="tab-btn" data-target="upload-panel">
+        Attach Photos (Multiple Images)
+      </button>
+      <button type="button" class="tab-btn" data-target="text-panel">
+        Manual Text Input
+      </button>
+    </div>
+
+    <!-- Scan Form -->
+    <form id="scan-form" action="{{ url_for('scan') }}" method="POST" enctype="multipart/form-data">
+      <!-- Container for multiple camera snapshots -->
+      <div id="camera-data-container"></div>
+
+      <!-- Tab 1: Live Camera Panel (Supports Multiple Frame Captures) -->
+      <div id="camera-panel" class="scan-panel">
+        <div class="camera-source-picker">
+          <label for="camera-select" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+            Input Sensor:
+          </label>
+          <select id="camera-select" class="form-select" style="max-width: 380px;">
+            <option value="">Querying connected video devices...</option>
+          </select>
+          <span style="font-size: 0.78rem; color: var(--text-dim);">
+            [Tip: Connect phone via Iriun Webcam for macro autofocus]
+          </span>
+        </div>
+
+        <div class="camera-container">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <div class="camera-overlay">
+            <div class="camera-target-box"></div>
+          </div>
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="camera-controls">
+          <button type="button" id="start-camera-btn" class="btn btn-secondary">
+            Switch / Restart Video Stream
+          </button>
+          <button type="button" id="capture-btn" class="btn btn-primary btn-lg">
+            Capture & Read Frame (OCR)
+          </button>
+        </div>
+
+        <!-- Multi-Frame Captured Gallery -->
+        <div id="captured-gallery-section" style="display: none; margin-top: 1.5rem; background-color: var(--bg-surface-elevated); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.6px;">
+              Attached Camera Frames (<span id="captured-count">0</span>)
+            </span>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">You can capture multiple panels of the food packet</span>
+          </div>
+          <div id="captured-thumbnails-grid" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: File Upload Panel (Supports Multiple Files) -->
+      <div id="upload-panel" class="scan-panel" style="display: none;">
+        <div id="file-dropzone" class="dropzone">
+          <div style="font-size: 0.85rem; font-weight: 700; color: var(--blue-400); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.5rem;">
+            Select or Drag Package Images
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Select one or multiple images (front label, back ingredients, sides). PNG, JPG, JPEG, WEBP.
+          </p>
+          <button type="button" class="btn btn-primary btn-sm">Browse Photos</button>
+          <input type="file" id="file-input" name="label_images" accept="image/*" multiple style="display: none;">
+        </div>
+
+        <!-- Attached Images Preview Grid -->
+        <div id="upload-gallery-section" style="display: none; margin-top: 1.5rem; background-color: var(--bg-surface-elevated); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.6px;">
+              Attached Files (<span id="upload-count">0</span>)
+            </span>
+            <button type="button" id="add-more-upload-btn" class="btn btn-secondary btn-sm">+ Add Another Photo</button>
+          </div>
+          <div id="upload-thumbnails-grid" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Text Direct Input Panel -->
+      <div id="text-panel" class="scan-panel" style="display: none;">
+        <div style="background-color: var(--bg-surface-elevated); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1rem;">
+          <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+            Paste or transcribe ingredients directly into the <strong>Ingredients Clause</strong> field below.
+          </p>
+        </div>
+      </div>
+
+      <!-- OCR Progress Bar -->
+      <div id="ocr-progress-box" class="ocr-progress-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; font-weight: 600; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+          <span id="ocr-status-text">Scanning label...</span>
+          <span style="color: var(--blue-400);">Optical Character Recognition</span>
+        </div>
+        <div class="ocr-progress-bar-bg">
+          <div id="ocr-progress-fill" class="ocr-progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- Product Metadata Fields -->
+      <div style="margin-top: 2rem; border-top: 1px solid var(--border-subtle); padding-top: 1.75rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+          Product & Portion Specifications
+        </h3>
+
+        <div style="display: grid; grid-template-columns: 2fr 1.5fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="product-name">Product Name *</label>
+            <input type="text" id="product-name" name="product_name" class="form-control" placeholder="e.g. Maggi 2-Minute Noodles" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="product-category">Category *</label>
+            <select id="product-category" name="category" class="form-select">
+              <option value="Instant Noodles & Soups">Instant Noodles & Soups</option>
+              <option value="Breakfast Cereals">Breakfast Cereals</option>
+              <option value="Biscuits & Cookies">Biscuits & Cookies</option>
+              <option value="Breads & Bakery">Breads & Bakery</option>
+              <option value="Chips & Savory Snacks">Chips & Savory Snacks</option>
+              <option value="Chocolates & Candies">Chocolates & Candies</option>
+              <option value="Juices & Beverages">Juices & Beverages</option>
+              <option value="Dairy & Plant Milks">Dairy & Plant Milks</option>
+              <option value="Sauces & Condiments">Sauces & Condiments</option>
+              <option value="Protein & Energy Bars">Protein & Energy Bars</option>
+              <option value="General Packaged Food" selected>General Packaged Food</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="packet-price">Packet Price (Optional)</label>
+            <input type="number" id="packet-price" name="packet_price" class="form-control" placeholder="Leave blank if unknown" step="any" min="0">
+            <span class="form-text">Used to normalize cost per serving</span>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="servings-input">Stated Servings (Optional)</label>
+            <input type="number" id="servings-input" name="servings" class="form-control" placeholder="Leave blank if not printed" step="any" min="0.1">
+            <span class="form-text">Portions stated on packet</span>
+          </div>
+        </div>
+
+        <!-- Extracted / Editable Ingredients Area -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <label class="form-label" for="ingredients-input" style="margin-bottom: 0;">
+              Ingredients Clause (OCR Extracted or Transcribed) *
+            </label>
+            <span style="font-size: 0.78rem; color: var(--text-dim);">Text from all attached photos is combined here</span>
+          </div>
+          <textarea id="ingredients-input" name="raw_text" class="form-control" placeholder="Extracted text from attached images will populate here automatically, or paste manually: Wheat flour, sugar, palm oil, INS 500(ii), INS 322..." required></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="margin-top: 1.75rem;">
+          <button type="submit" id="submit-analysis-btn" class="btn btn-primary btn-lg" style="width: 100%;">
+            Analyze Ingredients & Compute Rating
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let cameraInstance = null;
+  let ocrInstance = null;
+  const capturedFrames = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    ocrInstance = new OCREngine({
+      progressBar: document.getElementById("ocr-progress-fill"),
+      progressStatus: document.getElementById("ocr-status-text"),
+      progressContainer: document.getElementById("ocr-progress-box"),
+      outputTextArea: document.getElementById("ingredients-input")
+    });
+    window.ocrInstance = ocrInstance;
+
+    cameraInstance = new CameraManager("camera-video", "camera-select", (dataUrl) => {
+      // Callback when snapshot is taken
+      handleCameraCapture(dataUrl);
+    });
+    window.cameraInstance = cameraInstance;
+    cameraInstance.init();
+
+    const captureBtn = document.getElementById("capture-btn");
+    if (captureBtn) {
+      captureBtn.addEventListener("click", () => {
+        cameraInstance.captureSnapshot();
+      });
+    }
+
+    const restartBtn = document.getElementById("start-camera-btn");
+    if (restartBtn) {
+      restartBtn.addEventListener("click", () => {
+        cameraInstance.startStream();
+      });
+    }
+
+    initMultiFileUpload();
+  });
+
+  function handleCameraCapture(dataUrl) {
+    capturedFrames.push(dataUrl);
+
+    // Update hidden inputs
+    const container = document.getElementById("camera-data-container");
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "camera_data[]";
+    input.value = dataUrl;
+    container.appendChild(input);
+
+    // Update thumbnail gallery
+    const gallerySection = document.getElementById("captured-gallery-section");
+    const thumbnailsGrid = document.getElementById("captured-thumbnails-grid");
+    const countSpan = document.getElementById("captured-count");
+
+    if (gallerySection) gallerySection.style.display = "block";
+    if (countSpan) countSpan.textContent = capturedFrames.length;
+
+    const thumbBox = document.createElement("div");
+    thumbBox.style.position = "relative";
+    thumbBox.style.width = "90px";
+    thumbBox.style.height = "90px";
+    thumbBox.style.borderRadius = "6px";
+    thumbBox.style.overflow = "hidden";
+    thumbBox.style.border = "1px solid var(--border-blue)";
+
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    thumbBox.appendChild(img);
+
+    thumbnailsGrid.appendChild(thumbBox);
+
+    // Run OCR and append text
+    const textArea = document.getElementById("ingredients-input");
+    const existing = textArea.value.trim();
+
+    ocrInstance.recognize(dataUrl).then(newText => {
+      if (newText && newText.trim()) {
+        const cleaned = ocrInstance.formatExtractedText(newText);
+        if (existing) {
+          textArea.value = existing + "\n\n" + cleaned;
+        } else {
+          textArea.value = cleaned;
+        }
+      }
+    });
+  }
+
+  function initMultiFileUpload() {
+    const fileInput = document.getElementById("file-input");
+    const dropzone = document.getElementById("file-dropzone");
+    const gallerySection = document.getElementById("upload-gallery-section");
+    const thumbnailsGrid = document.getElementById("upload-thumbnails-grid");
+    const countSpan = document.getElementById("upload-count");
+    const addMoreBtn = document.getElementById("add-more-upload-btn");
+
+    if (!fileInput || !dropzone) return;
+
+    if (addMoreBtn) {
+      addMoreBtn.addEventListener("click", () => fileInput.click());
+    }
+
+    fileInput.addEventListener("change", () => {
+      const files = Array.from(fileInput.files);
+      if (files.length === 0) return;
+
+      if (gallerySection) gallerySection.style.display = "block";
+      if (countSpan) countSpan.textContent = files.length;
+      if (thumbnailsGrid) thumbnailsGrid.innerHTML = "";
+
+      const textArea = document.getElementById("ingredients-input");
+
+      files.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          const thumbBox = document.createElement("div");
+          thumbBox.style.width = "90px";
+          thumbBox.style.height = "90px";
+          thumbBox.style.borderRadius = "6px";
+          thumbBox.style.overflow = "hidden";
+          thumbBox.style.border = "1px solid var(--border-subtle)";
+
+          const img = document.createElement("img");
+          img.src = dataUrl;
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          thumbBox.appendChild(img);
+          thumbnailsGrid.appendChild(thumbBox);
+
+          // Run OCR across all attached images sequentially
+          ocrInstance.recognize(dataUrl).then(newText => {
+            if (newText && newText.trim()) {
+              const cleaned = ocrInstance.formatExtractedText(newText);
+              const current = textArea.value.trim();
+              if (current) {
+                textArea.value = current + "\n\n" + cleaned;
+              } else {
+                textArea.value = cleaned;
+              }
+            }
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+  }
+</script>
+{% endblock %}

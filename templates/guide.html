@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}INS & Food Additives Reference - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+  <div style="margin-bottom: 2.25rem;">
+    <span class="badge badge-blue" style="margin-bottom: 0.5rem;">Scientific Reference</span>
+    <h1 class="card-title" style="font-size: 2.2rem; margin-bottom: 0.5rem;">Food Additive & INS Code Standards</h1>
+    <p class="card-subtitle">
+      A systematic reference for decoding the International Numbering System (INS), industrial preservatives, and hidden sugar derivatives.
+    </p>
+  </div>
+
+  <!-- Section 1: The INS / E-Number Decoder -->
+  <div class="card" style="margin-bottom: 2rem; padding: 2.25rem;">
+    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.75rem;">
+      1. International Numbering System (INS) Framework
+    </h2>
+    <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">
+      The <strong>INS</strong> system (aligned with European <strong>E-numbers</strong>) assigns standardized numerical identifiers to food additives. When manufacturing declarations cite <em>"INS 621"</em> rather than <em>"Monosodium Glutamate"</em>, or <em>"INS 102"</em> rather than <em>"Tartrazine"</em>, consumers are frequently unaware of the chemical compounds being ingested.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+      <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 1.15rem; border-radius: var(--radius-md);">
+        <div style="font-weight: 800; color: var(--blue-400); font-family: var(--font-mono); margin-bottom: 0.25rem;">100 – 199</div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Coloring Agents</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Synthetic pigments and dyes (e.g. INS 102 Tartrazine, INS 129 Red 40, INS 150d Caramel IV).</div>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 1.15rem; border-radius: var(--radius-md);">
+        <div style="font-weight: 800; color: var(--blue-400); font-family: var(--font-mono); margin-bottom: 0.25rem;">200 – 299</div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Preservatives</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Antimicrobial inhibitors (e.g. INS 211 Sodium Benzoate, INS 220 Sulfites, INS 250 Sodium Nitrite).</div>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 1.15rem; border-radius: var(--radius-md);">
+        <div style="font-weight: 800; color: var(--blue-400); font-family: var(--font-mono); margin-bottom: 0.25rem;">300 – 399</div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Antioxidants & Regulators</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Lipid stabilization (e.g. INS 300 Ascorbic Acid, INS 319 TBHQ, INS 322 Lecithin).</div>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 1.15rem; border-radius: var(--radius-md);">
+        <div style="font-weight: 800; color: var(--blue-400); font-family: var(--font-mono); margin-bottom: 0.25rem;">600 – 699</div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Flavor Enhancers</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Savory neuro-enhancers (e.g. INS 621 MSG, INS 627 Guanylate, INS 631 Inosinate).</div>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 1.15rem; border-radius: var(--radius-md);">
+        <div style="font-weight: 800; color: var(--blue-400); font-family: var(--font-mono); margin-bottom: 0.25rem;">900 – 999</div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Artificial Sweeteners</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Intense sweeteners and glazes (e.g. INS 951 Aspartame, INS 950 Ace-K, INS 955 Sucralose).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: The Hidden Sugar Trap -->
+  <div class="card" style="margin-bottom: 2rem; padding: 2.25rem;">
+    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.75rem;">
+      2. Sugar Fragmentation & Synonyms
+    </h2>
+    <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem;">
+      Regulatory standards mandate ingredients be ordered by decreasing weight. Manufacturers frequently split refined sugars across multiple chemical derivatives to suppress sugar from appearing in primary positions:
+    </p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+      <span class="badge badge-caution">High Fructose Corn Syrup</span>
+      <span class="badge badge-caution">Invert Sugar Syrup</span>
+      <span class="badge badge-caution">Maltodextrin</span>
+      <span class="badge badge-caution">Dextrose</span>
+      <span class="badge badge-caution">Liquid Glucose</span>
+      <span class="badge badge-caution">Corn Syrup Solids</span>
+      <span class="badge badge-caution">Barley Malt Extract</span>
+      <span class="badge badge-caution">Fruit Juice Concentrate</span>
+      <span class="badge badge-caution">Agave Nectar</span>
+      <span class="badge badge-caution">Treacle</span>
+      <span class="badge badge-caution">Molasses</span>
+      <span class="badge badge-caution">Sucrose</span>
+      <span class="badge badge-caution">Maltose</span>
+    </div>
+  </div>
+
+  <!-- Section 3: Low-grade Industrial Fats -->
+  <div class="card" style="margin-bottom: 2rem; padding: 2.25rem;">
+    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.75rem;">
+      3. Processed Lipids: Palm Olein & Hydrogenated Fats
+    </h2>
+    <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">
+      Commercial formulations frequently utilize <strong>fractionated palm olein</strong> or <strong>interesterified vegetable fats</strong> due to thermal stability and minimal cost. These substances are concentrated in saturated palmitic acid and can carry trace industrial trans-fatty acid contaminants.
+    </p>
+    <div class="breakdown-item caution">
+      <strong>Clinical Observation:</strong> Prioritize products manufactured with expeller-pressed seed oils, pure butterfat, or cold-pressed olive oils over hydrogenated palm kernel oils.
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 2rem;">
+    <a href="{{ url_for('scan') }}" class="btn btn-primary btn-lg">
+      Launch Scanner Terminal
+    </a>
+  </div>
+</div>
+{% endblock %}

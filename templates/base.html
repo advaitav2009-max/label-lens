@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Label Lens - Packaged Food Ingredient Intelligence{% endblock %}</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Core Dark Theme CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Tesseract.js CDN for instantaneous client-side OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="{{ url_for('index') }}" class="brand">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Label Lens">
+        <div class="brand-text">
+          <span class="brand-title">Label <span>Lens</span></span>
+          <span class="brand-sub">Decoding food labels</span>
+        </div>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="{{ url_for('scan') }}" class="nav-link {% if request.endpoint == 'scan' %}active{% endif %}">Scan Label</a></li>
+        <li><a href="{{ url_for('compare') }}" class="nav-link {% if request.endpoint == 'compare' %}active{% endif %}">Compare</a></li>
+        <li><a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">History</a></li>
+        <li><a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">Additives Guide</a></li>
+        
+        {% if current_user %}
+          <li>
+            <a href="{{ url_for('profile') }}" class="nav-user-badge">
+              <span class="nav-avatar">{{ current_user.username[0]|upper }}</span>
+              <span>{{ current_user.username }}</span>
+            </a>
+          </li>
+          <li><a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Sign Out</a></li>
+        {% else %}
+          <li><a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Sign In</a></li>
+          <li><a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Create Profile</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </header>
+
+  <!-- Flash Messages -->
+  <div class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" width="20" height="20" alt="Label Lens">
+          <strong style="color: var(--text-primary); font-size: 1rem; letter-spacing: -0.3px;">Label Lens</strong>
+        </div>
+        <p class="footer-copy">Algorithmic analysis of packaged food additives, industrial preservatives, allergens, and nutritional profiles.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="{{ url_for('scan') }}">Scanner</a></li>
+        <li><a href="{{ url_for('compare') }}">Compare</a></li>
+        <li><a href="{{ url_for('guide') }}">INS Reference</a></li>
+        <li><a href="{{ url_for('profile') }}">Health Profile</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/ocr.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

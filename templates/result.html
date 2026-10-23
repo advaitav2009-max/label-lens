@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+
+{% block title %}{{ scan.product_name }} - Diagnostic Report - Label Lens{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+  <!-- Top Actions -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
+    <a href="{{ url_for('scan') }}" class="btn btn-secondary btn-sm">
+      Back to Scanner
+    </a>
+    <div style="display: flex; gap: 0.5rem;">
+      <button type="button" id="toggle-edit-btn" class="btn btn-secondary btn-sm">
+        Edit Product Details
+      </button>
+      <a href="{{ url_for('compare_with', scan_id=scan.id) }}" class="btn btn-primary btn-sm">
+        Compare in {{ scan.category }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Inline Edit Product Details Form (Hidden by default, toggleable) -->
+  <div id="edit-details-card" class="card" style="display: none; margin-bottom: 2rem; border: 1px solid var(--border-blue); background-color: var(--bg-surface-elevated); padding: 1.75rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+        Edit Product Information
+      </h3>
+      <button type="button" id="close-edit-btn" class="btn btn-secondary btn-sm">Close</button>
+    </div>
+    <form action="{{ url_for('edit_scan', scan_id=scan.id) }}" method="POST">
+      <div style="display: grid; grid-template-columns: 2fr 1.5fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="edit-name">Product Name *</label>
+          <input type="text" id="edit-name" name="product_name" class="form-control" value="{{ scan.product_name }}" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="edit-category">Category *</label>
+          <select id="edit-category" name="category" class="form-select">
+            <option value="Instant Noodles & Soups" {% if scan.category == 'Instant Noodles & Soups' %}selected{% endif %}>Instant Noodles & Soups</option>
+            <option value="Breakfast Cereals" {% if scan.category == 'Breakfast Cereals' %}selected{% endif %}>Breakfast Cereals</option>
+            <option value="Biscuits & Cookies" {% if scan.category == 'Biscuits & Cookies' %}selected{% endif %}>Biscuits & Cookies</option>
+            <option value="Breads & Bakery" {% if scan.category == 'Breads & Bakery' %}selected{% endif %}>Breads & Bakery</option>
+            <option value="Chips & Savory Snacks" {% if scan.category == 'Chips & Savory Snacks' %}selected{% endif %}>Chips & Savory Snacks</option>
+            <option value="Chocolates & Candies" {% if scan.category == 'Chocolates & Candies' %}selected{% endif %}>Chocolates & Candies</option>
+            <option value="Juices & Beverages" {% if scan.category == 'Juices & Beverages' %}selected{% endif %}>Juices & Beverages</option>
+            <option value="Dairy & Plant Milks" {% if scan.category == 'Dairy & Plant Milks' %}selected{% endif %}>Dairy & Plant Milks</option>
+            <option value="Sauces & Condiments" {% if scan.category == 'Sauces & Condiments' %}selected{% endif %}>Sauces & Condiments</option>
+            <option value="Protein & Energy Bars" {% if scan.category == 'Protein & Energy Bars' %}selected{% endif %}>Protein & Energy Bars</option>
+            <option value="General Packaged Food" {% if scan.category == 'General Packaged Food' %}selected{% endif %}>General Packaged Food</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="edit-price">Packet Price (Optional)</label>
+          <input type="number" id="edit-price" name="packet_price" class="form-control" value="{{ scan.packet_price if scan.packet_price > 0 else '' }}" placeholder="Not specified" step="any" min="0">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="edit-servings">Stated Servings (Optional)</label>
+          <input type="number" id="edit-servings" name="servings" class="form-control" value="{{ scan.servings if scan.servings > 0 else '' }}" placeholder="Not specified" step="any" min="0.1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="edit-raw-text">Ingredients Clause *</label>
+        <textarea id="edit-raw-text" name="raw_text" class="form-control" rows="5" required>{{ scan.raw_text }}</textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Save & Re-evaluate Product
+      </button>
+    </form>
+  </div>
+
+  {% set analysis = scan.analysis %}
+
+  <!-- Non-Food Warning Banner if detected -->
+  {% if analysis.non_food_warning %}
+    <div class="card" style="border-left: 4px solid var(--caution-text); margin-bottom: 1.75rem; background-color: var(--caution-bg); border-color: var(--caution-border);">
+      <h3 style="font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--caution-text); margin-bottom: 0.35rem;">
+        Non-Food Text Detected
+      </h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+        The extracted typography does not appear to contain recognizable food ingredients, additives, or packaging clauses. If you accidentally scanned a document or non-food surface, please re-scan or click <strong>Edit Product Details</strong> above to correct the ingredient list.
+      </p>
+    </div>
+  {% endif %}
+
+  <!-- Hero Verdict Card -->
+  <div class="verdict-hero {{ scan.verdict_badge }}">
+    <div class="verdict-header">
+      <div>
+        <span class="verdict-badge-large">
+          {% if scan.verdict_badge == 'safe' %}
+            Recommended Formulation
+          {% elif scan.verdict_badge == 'caution' %}
+            Moderate Formulation
+          {% elif scan.verdict_badge in ['danger', 'avoid', 'warning'] %}
+            Unfavorable / Restrict
+          {% endif %}
+        </span>
+        <span style="font-size: 0.85rem; margin-left: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">{{ scan.category }}</span>
+      </div>
+
+      <!-- Professional Score Indicator -->
+      <div class="score-pill-container">
+        <span class="score-number">{{ scan.star_rating }}</span>
+        <span class="score-max">/ 5.0</span>
+      </div>
+    </div>
+
+    <div>
+      <h1 class="verdict-title">{{ scan.product_name }}</h1>
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-top: 0.35rem; color: var(--text-secondary);">
+        {{ scan.verdict }}
+      </h2>
+    </div>
+
+    <!-- Recommendation Statement -->
+    <div class="verdict-recommendation">
+      <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.35rem; color: var(--blue-400);">
+        Recommendation Summary
+      </div>
+      <div style="font-weight: 500; line-height: 1.5; color: var(--text-primary);">
+        {{ analysis.eat_recommendation }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Critical Personal Alerts Section -->
+  {% if analysis.user_allergen_warnings or analysis.diet_conflicts or analysis.avoid_conflicts %}
+    <div class="card" style="border-left: 4px solid var(--danger-text); margin-bottom: 1.75rem; background-color: var(--danger-bg); border-color: var(--danger-border);">
+      <h3 style="font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--danger-text); margin-bottom: 0.75rem;">
+        Critical Profile Conflicts
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        {% for al in analysis.user_allergen_warnings %}
+          <div style="color: var(--danger-text); font-weight: 600; font-size: 0.92rem;">
+            [ALLERGEN HAZARD] Contains <strong>{{ al }}</strong>, conflicting with your registered medical allergy profile.
+          </div>
+        {% endfor %}
+
+        {% for dc in analysis.diet_conflicts %}
+          <div style="color: #FDBA74; font-weight: 600; font-size: 0.92rem;">
+            [DIETARY RESTRICTION] {{ dc }}
+          </div>
+        {% endfor %}
+
+        {% for av in analysis.avoid_conflicts %}
+          <div style="color: var(--caution-text); font-weight: 600; font-size: 0.92rem;">
+            [BLACKLISTED ITEM] Contains <strong>{{ av }}</strong> from your personal avoidance criteria.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Top Reasons Breakdown -->
+  <div class="card" style="margin-bottom: 1.75rem;">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.5px;">
+      Diagnostic Rationale
+    </h3>
+    <ul class="breakdown-list">
+      {% for reason in analysis.reasons %}
+        <li class="breakdown-item" style="font-size: 0.9rem;">
+          {{ reason }}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- Health Goals Alignment Cards -->
+  {% if analysis.goal_feedbacks %}
+    <div class="card" style="margin-bottom: 1.75rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">
+        Nutritional Objective Alignment
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Assessment relative to registered personal dietary targets:
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+        {% for gf in analysis.goal_feedbacks %}
+          <div class="breakdown-item {% if gf.status == 'good' %}safe{% elif gf.status == 'warning' %}danger{% else %}caution{% endif %}" style="padding: 1rem;">
+            <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">
+              {{ gf.goal }}
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.45;">
+              {{ gf.message }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Budget & Serving Analysis Section (Optional Aware) -->
+  <div class="card" style="margin-bottom: 1.75rem; border-left: 4px solid var(--blue-500);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+        Portion Economics
+      </h3>
+      {% if scan.cost_per_serving and scan.cost_per_serving > 0 and current_user and current_user.budget_target %}
+        <span class="badge {% if scan.cost_per_serving <= current_user.budget_target %}badge-safe{% else %}badge-caution{% endif %}">
+          {% if scan.cost_per_serving <= current_user.budget_target %}
+            Within Target Budget
+          {% else %}
+            Above Target Budget
+          {% endif %}
+        </span>
+      {% elif not scan.cost_per_serving or scan.cost_per_serving <= 0 %}
+        <span class="badge badge-grey">Pricing Not Provided</span>
+      {% endif %}
+    </div>
+
+    <div class="budget-chip-group">
+      <div class="budget-chip">
+        <div class="budget-chip-lbl">Package Retail Price</div>
+        <div class="budget-chip-val">
+          {% if scan.packet_price and scan.packet_price > 0 %}
+            {{ current_user.currency if current_user else '₹' }}{{ "%.2f"|format(scan.packet_price) }}
+          {% else %}
+            <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-dim);">Not provided</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="budget-chip">
+        <div class="budget-chip-lbl">Stated Package Portions</div>
+        <div class="budget-chip-val">
+          {% if scan.servings and scan.servings > 0 %}
+            {{ scan.servings|int if scan.servings == scan.servings|int else scan.servings }}
+          {% else %}
+            <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-dim);">Not provided</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="budget-chip">
+        <div class="budget-chip-lbl">Normalized Cost / Portion</div>
+        <div class="budget-chip-val" style="color: var(--blue-400);">
+          {% if scan.cost_per_serving and scan.cost_per_serving > 0 %}
+            {{ current_user.currency if current_user else '₹' }}{{ "%.2f"|format(scan.cost_per_serving) }}
+          {% else %}
+            <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-dim);">Omitted</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="budget-chip">
+        <div class="budget-chip-lbl">Target Portion Budget</div>
+        <div class="budget-chip-val" style="color: var(--text-muted);">
+          {% if current_user and current_user.budget_target %}
+            {{ current_user.currency if current_user else '₹' }}{{ "%.2f"|format(current_user.budget_target) }}
+          {% else %}
+            <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-dim);">Not set</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if analysis.budget_feedback and analysis.budget_feedback.message %}
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 1rem; line-height: 1.5;">
+        {{ analysis.budget_feedback.message }}
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Detailed Ingredient Breakdown Grids -->
+  <div class="analysis-grid">
+    <!-- Card: Sugars Detected -->
+    <div class="breakdown-card">
+      <div class="breakdown-header">
+        <h4 class="breakdown-title">Added Sweeteners</h4>
+      </div>
+      {% if analysis.detected_sugars %}
+        <p style="font-size: 0.82rem; color: var(--danger-text); font-weight: 600; margin-bottom: 0.75rem;">
+          {{ analysis.detected_sugars|length }} sweetener synonym(s) detected:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+          {% for sugar in analysis.detected_sugars %}
+            <span class="badge badge-danger">{{ sugar }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="breakdown-item safe">
+          No common added sugar synonyms detected in ingredients clause.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Card: Industrial Fats & Oils -->
+    <div class="breakdown-card">
+      <div class="breakdown-header">
+        <h4 class="breakdown-title">Processed Oils & Lipids</h4>
+      </div>
+      {% if analysis.detected_fats %}
+        <p style="font-size: 0.82rem; color: var(--caution-text); font-weight: 600; margin-bottom: 0.75rem;">
+          {{ analysis.detected_fats|length }} industrial lipid marker(s):
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+          {% for fat in analysis.detected_fats %}
+            <span class="badge badge-caution">{{ fat }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="breakdown-item safe">
+          Free from palm olein and hydrogenated vegetable fats.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Card: Wholesome & Beneficial -->
+    <div class="breakdown-card">
+      <div class="breakdown-header">
+        <h4 class="breakdown-title">Beneficial Nutrients</h4>
+      </div>
+      {% if analysis.detected_beneficial %}
+        <p style="font-size: 0.82rem; color: var(--safe-text); font-weight: 600; margin-bottom: 0.75rem;">
+          Recognized whole-food ingredients:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+          {% for good in analysis.detected_beneficial %}
+            <span class="badge badge-safe">{{ good }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="breakdown-item">
+          No prominent whole grains or functional superfoods identified.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Card: Common Allergens Disclosed -->
+    <div class="breakdown-card">
+      <div class="breakdown-header">
+        <h4 class="breakdown-title">Disclosed Allergens</h4>
+      </div>
+      {% if analysis.detected_allergens %}
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+          {% for al in analysis.detected_allergens %}
+            <span class="badge badge-blue">{{ al.display }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="breakdown-item safe">
+          No common allergen markers detected.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Decoded Additives & INS Numbers Table -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+        Decoded Additives & INS/E-Codes ({{ analysis.detected_additives|length }})
+      </h3>
+      <a href="{{ url_for('guide') }}" style="font-size: 0.82rem; font-weight: 600;">INS Catalog Reference</a>
+    </div>
+
+    {% if analysis.detected_additives %}
+      <div style="overflow-x: auto;">
+        <table class="additive-table">
+          <thead>
+            <tr>
+              <th>Identification</th>
+              <th>Functional Category</th>
+              <th>Safety Classification</th>
+              <th>Pharmacological / Health Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in analysis.detected_additives %}
+              <tr>
+                <td style="font-family: var(--font-mono); font-weight: 700; color: var(--text-primary);">{{ item.name }}</td>
+                <td><span class="badge badge-grey">{{ item.category }}</span></td>
+                <td>
+                  {% if item.safety == 'safe' or item.safety == 'beneficial' %}
+                    <span class="badge badge-safe">Approved / Benign</span>
+                  {% elif item.safety == 'caution' %}
+                    <span class="badge badge-caution">Caution / Restrict</span>
+                  {% else %}
+                    <span class="badge badge-danger">High Risk</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+                  {{ item.description }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="breakdown-item safe" style="padding: 1rem;">
+        Clean formulation: No synthetic INS or E-codes detected in ingredients clause.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Raw Ingredients Extracted -->
+  <div class="card" style="margin-bottom: 2rem; background-color: var(--bg-canvas); border: 1px solid var(--border-subtle);">
+    <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin-bottom: 0.5rem;">
+      Raw Extracted Transcription
+    </h4>
+    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; font-family: var(--font-mono); word-break: break-word;">
+      {{ scan.raw_text }}
+    </p>
+  </div>
+
+  <!-- Call to Action: Compare with others -->
+  <div class="card" style="background: linear-gradient(135deg, var(--bg-surface-elevated) 0%, var(--bg-surface) 100%); border: 1px solid var(--border-blue); text-align: center; padding: 2.5rem;">
+    <h3 style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; letter-spacing: -0.4px;">
+      Evaluate Alternate Formulations
+    </h3>
+    <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+      Compare <strong>{{ scan.product_name }}</strong> side-by-side with another formulation in the <strong>{{ scan.category }}</strong> category.
+    </p>
+    <a href="{{ url_for('compare_with', scan_id=scan.id) }}" class="btn btn-primary btn-lg">
+      Launch Product Comparison
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggleBtn = document.getElementById("toggle-edit-btn");
+    const closeBtn = document.getElementById("close-edit-btn");
+    const editCard = document.getElementById("edit-details-card");
+
+    if (toggleBtn && editCard) {
+      toggleBtn.addEventListener("click", () => {
+        const isHidden = editCard.style.display === "none";
+        editCard.style.display = isHidden ? "block" : "none";
+        if (isHidden) {
+          editCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    }
+
+    if (closeBtn && editCard) {
+      closeBtn.addEventListener("click", () => {
+        editCard.style.display = "none";
+      });
+    }
+  });
+</script>
+{% endblock %}

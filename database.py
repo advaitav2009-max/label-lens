@@ -1,0 +1,276 @@
+"""
+Label Lens - SQLite Database Management
+Handles user authentication, profiles, scans, and comparison history.
+"""
+
+import sqlite3
+import os
+import json
+import shutil
+from datetime import datetime
+
+# Vercel serverless environment has a read-only root filesystem.
+# Store the SQLite database in /tmp when running on Vercel.
+if os.environ.get("VERCEL"):
+    DB_PATH = "/tmp/label_lens.db"
+    BUNDLED_DB = os.path.join(os.path.dirname(__file__), "label_lens.db")
+    if not os.path.exists(DB_PATH) and os.path.exists(BUNDLED_DB):
+        try:
+            shutil.copy2(BUNDLED_DB, DB_PATH)
+        except Exception:
+            pass
+else:
+    DB_PATH = os.path.join(os.path.dirname(__file__), "label_lens.db")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Users table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        allergies TEXT DEFAULT '[]',
+        dietary_preference TEXT DEFAULT 'Non-Vegetarian',
+        avoid_items TEXT DEFAULT '[]',
+        health_goals TEXT DEFAULT '[]',
+        budget_target REAL DEFAULT 50.0,
+        currency TEXT DEFAULT '₹',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Scanned Products table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS scans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        product_name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        packet_price REAL DEFAULT 0.0,
+        servings REAL DEFAULT 1.0,
+        cost_per_serving REAL DEFAULT 0.0,
+        image_path TEXT,
+        raw_text TEXT,
+        clean_ingredients TEXT,
+        overall_score INTEGER DEFAULT 50,
+        star_rating REAL DEFAULT 2.5,
+        verdict TEXT NOT NULL,
+        verdict_badge TEXT DEFAULT 'caution',
+        analysis_json TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+def get_user_by_id(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        user = dict(row)
+        user['allergies'] = json.loads(user['allergies'] or '[]')
+        user['custom_allergies'] = json.loads(user.get('custom_allergies') or '[]') if 'custom_allergies' in user else []
+        user['avoid_items'] = json.loads(user['avoid_items'] or '[]')
+        user['health_goals'] = json.loads(user['health_goals'] or '[]')
+        user['custom_goals'] = json.loads(user.get('custom_goals') or '[]') if 'custom_goals' in user else []
+        return user
+    return None
+
+def get_user_by_username(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        user = dict(row)
+        user['allergies'] = json.loads(user['allergies'] or '[]')
+        user['custom_allergies'] = json.loads(user.get('custom_allergies') or '[]') if 'custom_allergies' in user else []
+        user['avoid_items'] = json.loads(user['avoid_items'] or '[]')
+        user['health_goals'] = json.loads(user['health_goals'] or '[]')
+        user['custom_goals'] = json.loads(user.get('custom_goals') or '[]') if 'custom_goals' in user else []
+        return user
+    return None
+
+def get_user_by_email(email):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        user = dict(row)
+        user['allergies'] = json.loads(user['allergies'] or '[]')
+        user['custom_allergies'] = json.loads(user.get('custom_allergies') or '[]') if 'custom_allergies' in user else []
+        user['avoid_items'] = json.loads(user['avoid_items'] or '[]')
+        user['health_goals'] = json.loads(user['health_goals'] or '[]')
+        user['custom_goals'] = json.loads(user.get('custom_goals') or '[]') if 'custom_goals' in user else []
+        return user
+    return None
+
+def create_user(username, email, password_hash, allergies=None, custom_allergies=None,
+                dietary_preference='Non-Vegetarian', avoid_items=None, health_goals=None,
+                custom_goals=None, budget_target=None, currency='₹'):
+    conn = get_db()
+    cursor = conn.cursor()
+    allergies_json = json.dumps(allergies or [])
+    custom_allergies_json = json.dumps(custom_allergies or [])
+    avoid_items_json = json.dumps(avoid_items or [])
+    health_goals_json = json.dumps(health_goals or [])
+    custom_goals_json = json.dumps(custom_goals or [])
+
+    cursor.execute("""
+    INSERT INTO users (username, email, password_hash, allergies, dietary_preference, avoid_items, health_goals, budget_target, currency)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (username, email, password_hash, allergies_json, dietary_preference, avoid_items_json, health_goals_json, budget_target, currency))
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return user_id
+
+def update_user_profile(user_id, allergies, dietary_preference, avoid_items, health_goals,
+                        budget_target=None, currency='₹', custom_allergies=None, custom_goals=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE users SET
+        allergies = ?,
+        dietary_preference = ?,
+        avoid_items = ?,
+        health_goals = ?,
+        budget_target = ?,
+        currency = ?
+    WHERE id = ?
+    """, (json.dumps(allergies), dietary_preference, json.dumps(avoid_items), json.dumps(health_goals), budget_target, currency, user_id))
+    conn.commit()
+    conn.close()
+
+def get_scans_by_ids(scan_ids):
+    if not scan_ids:
+        return []
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in scan_ids)
+    cursor.execute(f"SELECT * FROM scans WHERE id IN ({placeholders})", scan_ids)
+    rows = cursor.fetchall()
+    conn.close()
+    scans_dict = {}
+    for r in rows:
+        d = dict(r)
+        d['analysis'] = json.loads(d['analysis_json'])
+        scans_dict[d['id']] = d
+    # Preserve order requested
+    return [scans_dict[sid] for sid in scan_ids if sid in scans_dict]
+
+def save_scan(user_id, product_name, category, packet_price, servings, cost_per_serving,
+              image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_dict):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO scans (
+        user_id, product_name, category, packet_price, servings, cost_per_serving,
+        image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        user_id, product_name, category, packet_price, servings, cost_per_serving,
+        image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, json.dumps(analysis_dict)
+    ))
+    scan_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return scan_id
+
+def get_scan_by_id(scan_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM scans WHERE id = ?", (scan_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        scan = dict(row)
+        scan['analysis'] = json.loads(scan['analysis_json'])
+        return scan
+    return None
+
+def get_user_scans(user_id, limit=50):
+    conn = get_db()
+    cursor = conn.cursor()
+    if user_id:
+        cursor.execute("SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC LIMIT ?", (user_id, limit))
+    else:
+        cursor.execute("SELECT * FROM scans ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    scans = []
+    for r in rows:
+        d = dict(r)
+        d['analysis'] = json.loads(d['analysis_json'])
+        scans.append(d)
+    return scans
+
+def get_scans_by_category(category, exclude_id=None, limit=10):
+    conn = get_db()
+    cursor = conn.cursor()
+    if exclude_id:
+        cursor.execute("SELECT * FROM scans WHERE category = ? AND id != ? ORDER BY created_at DESC LIMIT ?", (category, exclude_id, limit))
+    else:
+        cursor.execute("SELECT * FROM scans WHERE category = ? ORDER BY created_at DESC LIMIT ?", (category, limit))
+    rows = cursor.fetchall()
+    conn.close()
+    scans = []
+    for r in rows:
+        d = dict(r)
+        d['analysis'] = json.loads(d['analysis_json'])
+        scans.append(d)
+    return scans
+
+def update_scan(scan_id, product_name, category, packet_price, servings, cost_per_serving,
+                raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_dict):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE scans SET
+        product_name = ?,
+        category = ?,
+        packet_price = ?,
+        servings = ?,
+        cost_per_serving = ?,
+        raw_text = ?,
+        clean_ingredients = ?,
+        overall_score = ?,
+        star_rating = ?,
+        verdict = ?,
+        verdict_badge = ?,
+        analysis_json = ?
+    WHERE id = ?
+    """, (
+        product_name, category, packet_price, servings, cost_per_serving,
+        raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge,
+        json.dumps(analysis_dict), scan_id
+    ))
+    conn.commit()
+    conn.close()
+
+def delete_scan(scan_id, user_id=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if user_id:
+        cursor.execute("DELETE FROM scans WHERE id = ? AND user_id = ?", (scan_id, user_id))
+    else:
+        cursor.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
+    conn.commit()
+    conn.close()

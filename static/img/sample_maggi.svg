@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="maggiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#991B1B" />
+      <stop offset="100%" stop-color="#7F1D1D" />
+    </linearGradient>
+  </defs>
+  <rect x="25" y="25" width="150" height="190" rx="14" fill="url(#maggiGrad)" stroke="#B91C1C" stroke-width="1.5"/>
+  <rect x="38" y="45" width="124" height="34" rx="4" fill="#FACC15"/>
+  <text x="100" y="68" font-family="'Inter', sans-serif" font-weight="900" font-size="14" fill="#B91C1C" text-anchor="middle" letter-spacing="1">MAGGI</text>
+  <rect x="50" y="86" width="100" height="18" rx="2" fill="#0F172A"/>
+  <text x="100" y="99" font-family="'Inter', sans-serif" font-weight="700" font-size="9" fill="#FDE047" text-anchor="middle">2-MINUTE MASALA</text>
+  <rect x="40" y="120" width="120" height="50" rx="8" fill="#18181B" stroke="#27272A" stroke-width="1"/>
+  <path d="M55 145 Q100 160 145 145" stroke="#FBBF24" stroke-width="3" fill="none"/>
+  <path d="M60 152 Q100 167 140 152" stroke="#FBBF24" stroke-width="2.5" fill="none"/>
+  <rect x="35" y="182" width="130" height="22" rx="3" fill="#000000" opacity="0.6"/>
+  <text x="100" y="196" font-family="monospace" font-size="7" fill="#FCA5A5" text-anchor="middle">PALM OIL · MSG 635 · MAIDA</text>
+</svg>

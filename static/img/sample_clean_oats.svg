@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="oatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+  </defs>
+  <!-- Bag Body -->
+  <rect x="30" y="25" width="140" height="190" rx="14" fill="url(#oatGrad)" stroke="#3B82F6" stroke-width="2"/>
+  <!-- Kraft top seal -->
+  <path d="M 30 50 Q 100 42 170 50 L 170 30 Q 100 20 30 30 Z" fill="#2563EB" opacity="0.6"/>
+  <!-- Front Banner -->
+  <rect x="42" y="65" width="116" height="30" rx="5" fill="#10B981"/>
+  <text x="100" y="84" font-family="Arial, sans-serif" font-weight="bold" font-size="11" fill="#FFFFFF" text-anchor="middle">100% WHOLE OATS</text>
+  <!-- Clean Leaf Icon -->
+  <circle cx="100" cy="125" r="28" fill="#1E293B" stroke="#34D399" stroke-width="2"/>
+  <path d="M92 135 C88 120 100 110 108 115 C108 125 102 135 92 135 Z" fill="#10B981"/>
+  <!-- Nutrition Badge -->
+  <rect x="42" y="165" width="116" height="38" rx="6" fill="#0284C7" opacity="0.2" stroke="#38BDF8" stroke-width="1"/>
+  <text x="100" y="180" font-family="Arial, sans-serif" font-weight="bold" font-size="8" fill="#38BDF8" text-anchor="middle">NO ADDED SUGAR</text>
+  <text x="100" y="193" font-family="Arial, sans-serif" font-size="8" fill="#E2E8F0" text-anchor="middle">Rolled Oats, Chia, Seeds</text>
+</svg>
