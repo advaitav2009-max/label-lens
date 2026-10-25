@@ -534,17 +534,22 @@ SUGAR_ALIASES = [
 
 # Ultra-processed & Unhealthy Oils / Fats
 UNHEALTHY_FATS = [
-    "palm oil", "palmolein", "palm olein", "refined palm oil", "fractionated palm kernel oil",
+    "palm oil", "palmolein", "pamolein", "palm olein", "palmolin", "pamolin",
+    "refined palm oil", "fractionated palm kernel oil", "palm kernel oil", "palm kernel",
+    "cottonseed oil", "refined cottonseed oil", "cotton seed oil", "cottonseed", "cotton seed",
     "hydrogenated vegetable oil", "partially hydrogenated vegetable oil", "hydrogenated fat",
-    "interesterified vegetable fat", "vanaspati", "margarine", "shortening",
-    "cottonseed oil", "refined cottonseed oil", "trans fat", "trans-fatty acids"
+    "hydrogenated vegetable fat", "interesterified vegetable fat", "vanaspati", "margarine",
+    "shortening", "edible vegetable oil", "refined vegetable oil", "vegetable oil",
+    "edible vegetable fat", "vegetable fat", "trans fat", "trans-fatty acids",
+    "rice bran oil", "ricebran oil"
 ]
 
 # Major Common Food Allergens
 ALLERGEN_CATEGORIES = {
     "peanuts": ["peanut", "peanuts", "groundnut", "groundnuts", "peanut butter", "peanut flour", "arachis oil"],
-    "tree_nuts": ["almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios",
-                  "hazelnut", "hazelnuts", "pecan", "pecans", "macadamia", "brazil nut", "brazil nuts", "praline"],
+    "tree_nuts": ["almond", "almonds", "cashew", "cashews", "cashew nut", "cashew nuts", "walnut", "walnuts",
+                  "pistachio", "pistachios", "hazelnut", "hazelnuts", "pecan", "pecans", "macadamia",
+                  "brazil nut", "brazil nuts", "praline", "nut", "nuts", "tree nut", "tree nuts"],
     "milk": ["milk", "dairy", "whey", "casein", "caseinate", "milk solids", "lactose", "butter", "ghee",
              "cheese", "cream", "skimmed milk", "whole milk powder", "curd", "yogurt"],
     "soy": ["soy", "soya", "soybean", "soybeans", "soy lecithin", "soya flour", "tofu", "edamame",

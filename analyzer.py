@@ -76,10 +76,19 @@ def clean_and_normalize_text(raw_text):
     
     text = raw_text.replace("\r", " ").replace("\n", " ")
     
+    # Common OCR typo corrections for packaged food packaging
+    text = re.sub(r"\bpamolein\b", "palmolein", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bpamolin\b", "palmolein", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bpalmolin\b", "palmolein", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(?:NS|1NS|lNS|1N5|IN5)\s*([0-9]{3,4})", r"INS \1", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b[1l|]odised\b", "iodised", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b[1l|]odized\b", "iodized", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bsugar powe(?:r|\.)?", "sugar powder", text, flags=re.IGNORECASE)
+
     # Isolate ingredients section if explicit ingredients header is present
     # Only stop at clearly distinct nutrition tables or manufacturer addresses
     match = re.search(
-        r"(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)",
+        r"(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]?\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)",
         text,
         re.IGNORECASE
     )
@@ -132,13 +141,13 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
     seen_additive_keys = set()
     
     ins_matches = re.findall(
-        r"(?:INS|E|1NS|lNS)[\s\.\-]*(?:No\.?)?[\s\-]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)",
+        r"(?:INS|E|1NS|lNS|NS|1N5|IN5)[\s\.\-]*(?:No\.?)?[\s\-]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)",
         lower_text,
         re.IGNORECASE
     )
     paren_matches = re.findall(r"\(([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)\)", lower_text)
     func_matches = re.findall(
-        r"(?:thickener|acidity regulator|stabilizer|emulsifier|preservative|flavour enhancer|flavor enhancer|colour|color|humectant|raising agent|anti-?caking agent)s?[\s\:]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)",
+        r"(?:thickener|acidity regulator|stabilizer|emulsifier|preservative|flavour enhancer|flavor enhancer|colour|color|humectant|raising agent|anti-?caking agent)s?[\s\:\(\[]*(?:INS|E|1NS|lNS|NS)?[\s\.\-]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)",
         lower_text,
         re.IGNORECASE
     )
@@ -190,11 +199,38 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
 
     # 3. Detect Unhealthy & Ultra-Processed Oils / Fats
     detected_fats = []
+    fat_display_map = {
+        "pamolein": "Palmolein (Palm Olein)",
+        "palmolein": "Palmolein (Palm Olein)",
+        "pamolin": "Palmolein (Palm Olein)",
+        "palmolin": "Palmolein (Palm Olein)",
+        "palm olein": "Palmolein (Palm Olein)",
+        "palm oil": "Palm Oil",
+        "refined palm oil": "Refined Palm Oil",
+        "cotton seed": "Cottonseed Oil",
+        "cottonseed": "Cottonseed Oil",
+        "cotton seed oil": "Cottonseed Oil",
+        "cottonseed oil": "Cottonseed Oil",
+        "refined cottonseed oil": "Cottonseed Oil",
+        "rice bran": "Rice Bran Oil",
+        "rice bran oil": "Rice Bran Oil",
+        "ricebran oil": "Rice Bran Oil",
+        "edible vegetable oil": "Edible Vegetable Oil (Processed)",
+        "vegetable oil": "Edible Vegetable Oil (Processed)",
+        "refined vegetable oil": "Refined Vegetable Oil",
+        "edible vegetable fat": "Edible Vegetable Fat",
+        "vegetable fat": "Vegetable Fat",
+        "hydrogenated vegetable oil": "Hydrogenated Vegetable Oil",
+        "hydrogenated vegetable fat": "Hydrogenated Vegetable Fat",
+        "hydrogenated fat": "Hydrogenated Fat",
+        "vanaspati": "Vanaspati (Hydrogenated Fat)",
+    }
     for fat in UNHEALTHY_FATS:
         pattern = r"\b" + re.escape(fat) + r"\b"
         if re.search(pattern, lower_text):
-            if fat.title() not in detected_fats:
-                detected_fats.append(fat.title())
+            display_name = fat_display_map.get(fat.lower(), fat.title())
+            if display_name not in detected_fats:
+                detected_fats.append(display_name)
 
     # 4. Check Allergens (Standard Options + Custom Typed)
     detected_allergens = []
@@ -257,8 +293,21 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
     avoid_conflicts = []
     for item in user_avoid:
         if item and len(item) > 2:
-            pattern = r"\b" + re.escape(item) + r"\b"
-            if re.search(pattern, lower_text):
+            aliases = [item]
+            if "palm" in item:
+                aliases.extend(["palmolein", "pamolein", "palm olein", "palmolin", "pamolin", "palm oil", "palm kernel", "palm kernel oil"])
+            elif "sugar" in item:
+                aliases.extend(SUGAR_ALIASES)
+            elif "cotton" in item:
+                aliases.extend(["cottonseed", "cotton seed", "cottonseed oil", "cotton seed oil"])
+            
+            matched = False
+            for al in aliases:
+                pattern = r"\b" + re.escape(al) + r"\b"
+                if re.search(pattern, lower_text):
+                    matched = True
+                    break
+            if matched:
                 avoid_conflicts.append(item.title())
 
     # 7. Beneficial / Positive Ingredients
