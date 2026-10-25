@@ -1,7 +1,9 @@
 /**
  * Label Lens - Camera & Video Stream Manager
- * Supports Webcams, Iriun Phone Webcam, Mobile Rear Cameras,
- * Snapshot Capture, and Frame Optimization for OCR.
+ * Features:
+ * - High-resolution stream with continuous autofocus for mobile & webcam
+ * - Automatic Iriun Webcam & rear mobile sensor selection
+ * - Lightweight client-side snapshot capture (<250KB) to prevent 413 payload limits
  */
 
 class CameraManager {
@@ -19,25 +21,17 @@ class CameraManager {
 
   async init() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("Camera API is not supported by your browser. Please use the File Upload tab.");
+      alert("Camera API is not supported by your browser. Please use the Attach Photos tab.");
       return false;
     }
 
     try {
-      // First ask for general permission to enumerate devices with labels
-      const initialStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false
-      });
-      this.stopCurrentStream();
       await this.populateCameraList();
       await this.startStream();
       return true;
     } catch (err) {
-      console.warn("Camera access request error:", err);
-      // Fallback: try basic video
+      console.warn("Camera init retry:", err);
       try {
-        await this.populateCameraList();
         await this.startStream();
         return true;
       } catch (err2) {
@@ -57,12 +51,11 @@ class CameraManager {
       if (videoDevices.length === 0) {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "No camera devices detected";
+        opt.textContent = "Camera ready (Default sensor)";
         this.cameraSelect.appendChild(opt);
         return;
       }
 
-      let iriunFound = false;
       let preferredDeviceId = null;
 
       videoDevices.forEach((device, index) => {
@@ -71,11 +64,10 @@ class CameraManager {
         const label = device.label || `Camera ${index + 1}`;
         opt.textContent = label;
 
-        // Auto-select Iriun webcam if user has phone connected via Iriun!
-        if (label.toLowerCase().includes("iriun") || label.toLowerCase().includes("droidcam") || label.toLowerCase().includes("phone")) {
-          opt.textContent = `[High-Res Phone Camera] ${label}`;
+        // Auto-select Iriun webcam or rear environment camera
+        const l = label.toLowerCase();
+        if (l.includes("iriun") || l.includes("droidcam") || l.includes("back") || l.includes("rear") || l.includes("environment")) {
           preferredDeviceId = device.deviceId;
-          iriunFound = true;
         }
 
         this.cameraSelect.appendChild(opt);
@@ -93,11 +85,21 @@ class CameraManager {
     this.stopCurrentStream();
     if (!this.video) return;
 
-    const deviceId = this.cameraSelect ? this.cameraSelect.value : null;
+    const deviceId = this.cameraSelect && this.cameraSelect.value ? this.cameraSelect.value : null;
+
+    // Advanced constraints for sharp macro text reading
     const constraints = {
       video: deviceId
-        ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-        : { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        ? {
+            deviceId: { exact: deviceId },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 }
+          }
+        : {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 }
+          },
       audio: false
     };
 
@@ -105,15 +107,37 @@ class CameraManager {
       this.currentStream = await navigator.mediaDevices.getUserMedia(constraints);
       this.video.srcObject = this.currentStream;
       await this.video.play();
+
+      // Attempt to enable continuous focus if supported by hardware
+      const track = this.currentStream.getVideoTracks()[0];
+      if (track && typeof track.applyConstraints === "function") {
+        try {
+          const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+          const advanced = {};
+          if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+            advanced.focusMode = "continuous";
+          }
+          if (capabilities.exposureMode && capabilities.exposureMode.includes("continuous")) {
+            advanced.exposureMode = "continuous";
+          }
+          if (Object.keys(advanced).length > 0) {
+            await track.applyConstraints({ advanced: [advanced] });
+          }
+        } catch (capErr) {
+          // Non-critical, ignore
+        }
+      }
     } catch (err) {
-      console.error("Failed to start video stream with constraints:", err);
-      // Fallback without resolution constraint
+      console.warn("Retrying camera with basic fallback constraints:", err);
       try {
-        this.currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        this.currentStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
         this.video.srcObject = this.currentStream;
         await this.video.play();
       } catch (err2) {
-        console.error("Fallback camera start failed:", err2);
+        console.error("Camera stream failed entirely:", err2);
       }
     }
   }
@@ -128,16 +152,32 @@ class CameraManager {
       return null;
     }
 
+    const vw = this.video.videoWidth || 1280;
+    const vh = this.video.videoHeight || 720;
+
+    // Rescale to max 1800px to maintain crisp detail without exceeding payload limits
+    const maxDim = 1800;
+    let width = vw;
+    let height = vh;
+    if (width > maxDim || height > maxDim) {
+      if (width > height) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+    }
+
     const canvas = document.createElement("canvas");
-    canvas.width = this.video.videoWidth || 1280;
-    canvas.height = this.video.videoHeight || 720;
+    canvas.width = width;
+    canvas.height = height;
 
-    const ctx = canvas.getContext("2d");
-    // Draw raw image
-    ctx.drawImage(this.video, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(this.video, 0, 0, width, height);
 
-    // Apply gentle contrast enhancement for OCR readability
-    this.capturedDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    // Compressed JPEG (<250KB)
+    this.capturedDataUrl = canvas.toDataURL("image/jpeg", 0.82);
 
     if (this.onCaptureCallback) {
       this.onCaptureCallback(this.capturedDataUrl);

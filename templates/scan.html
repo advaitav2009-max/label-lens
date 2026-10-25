@@ -36,7 +36,7 @@
     <!-- Scanner Tabs -->
     <div class="scanner-modes">
       <button type="button" class="tab-btn active" data-target="camera-panel">
-        Camera / Phone Cam (Iriun)
+        Camera / Live Stream
       </button>
       <button type="button" class="tab-btn" data-target="upload-panel">
         Attach Photos (Multiple Images)
@@ -48,10 +48,10 @@
 
     <!-- Scan Form -->
     <form id="scan-form" action="{{ url_for('scan') }}" method="POST" enctype="multipart/form-data">
-      <!-- Container for multiple camera snapshots -->
+      <!-- Container for compressed camera and file snapshots -->
       <div id="camera-data-container"></div>
 
-      <!-- Tab 1: Live Camera Panel (Supports Multiple Frame Captures) -->
+      <!-- Tab 1: Live Camera Panel (Supports Multiple Frame Captures & Native Phone Camera) -->
       <div id="camera-panel" class="scan-panel">
         <div class="camera-source-picker">
           <label for="camera-select" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
@@ -61,7 +61,7 @@
             <option value="">Querying connected video devices...</option>
           </select>
           <span style="font-size: 0.78rem; color: var(--text-dim);">
-            [Tip: Connect phone via Iriun Webcam for macro autofocus]
+            [Tip: Connect phone via Iriun Webcam on laptop, or use native camera button below]
           </span>
         </div>
 
@@ -73,28 +73,32 @@
         </div>
 
         <!-- Camera Controls -->
-        <div class="camera-controls">
+        <div class="camera-controls" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
           <button type="button" id="start-camera-btn" class="btn btn-secondary">
-            Switch / Restart Video Stream
+            Restart Stream
           </button>
           <button type="button" id="capture-btn" class="btn btn-primary btn-lg">
-            Capture & Read Frame (OCR)
+            Capture Frame
           </button>
+          <button type="button" id="mobile-cam-btn" class="btn btn-outline-blue btn-lg">
+            Take High-Res Photo (Phone Camera)
+          </button>
+          <input type="file" id="mobile-cam-input" accept="image/*" capture="environment" style="display: none;">
         </div>
 
         <!-- Multi-Frame Captured Gallery -->
         <div id="captured-gallery-section" style="display: none; margin-top: 1.5rem; background-color: var(--bg-surface-elevated); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.6px;">
-              Attached Camera Frames (<span id="captured-count">0</span>)
+              Attached Photos (<span id="captured-count">0</span>)
             </span>
-            <span style="font-size: 0.75rem; color: var(--text-dim);">You can capture multiple panels of the food packet</span>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Optimized &amp; compressed automatically</span>
           </div>
           <div id="captured-thumbnails-grid" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
         </div>
       </div>
 
-      <!-- Tab 2: File Upload Panel (Supports Multiple Files) -->
+      <!-- Tab 2: File Upload Panel (Supports Multiple Files with Client Compression) -->
       <div id="upload-panel" class="scan-panel" style="display: none;">
         <div id="file-dropzone" class="dropzone">
           <div style="font-size: 0.85rem; font-weight: 700; color: var(--blue-400); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.5rem;">
@@ -103,8 +107,8 @@
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
             Select one or multiple images (front label, back ingredients, sides). PNG, JPG, JPEG, WEBP.
           </p>
-          <button type="button" class="btn btn-primary btn-sm">Browse Photos</button>
-          <input type="file" id="file-input" name="label_images" accept="image/*" multiple style="display: none;">
+          <button type="button" id="browse-photos-btn" class="btn btn-primary btn-sm">Browse Photos</button>
+          <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
         </div>
 
         <!-- Attached Images Preview Grid -->
@@ -142,7 +146,7 @@
       <!-- Product Metadata Fields -->
       <div style="margin-top: 2rem; border-top: 1px solid var(--border-subtle); padding-top: 1.75rem;">
         <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-          Product & Portion Specifications
+          Product &amp; Portion Specifications
         </h3>
 
         <div style="display: grid; grid-template-columns: 2fr 1.5fr; gap: 1rem; margin-bottom: 1rem;">
@@ -153,16 +157,16 @@
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" for="product-category">Category *</label>
             <select id="product-category" name="category" class="form-select">
-              <option value="Instant Noodles & Soups">Instant Noodles & Soups</option>
+              <option value="Instant Noodles &amp; Soups">Instant Noodles &amp; Soups</option>
               <option value="Breakfast Cereals">Breakfast Cereals</option>
-              <option value="Biscuits & Cookies">Biscuits & Cookies</option>
-              <option value="Breads & Bakery">Breads & Bakery</option>
-              <option value="Chips & Savory Snacks">Chips & Savory Snacks</option>
-              <option value="Chocolates & Candies">Chocolates & Candies</option>
-              <option value="Juices & Beverages">Juices & Beverages</option>
-              <option value="Dairy & Plant Milks">Dairy & Plant Milks</option>
-              <option value="Sauces & Condiments">Sauces & Condiments</option>
-              <option value="Protein & Energy Bars">Protein & Energy Bars</option>
+              <option value="Biscuits &amp; Cookies">Biscuits &amp; Cookies</option>
+              <option value="Breads &amp; Bakery">Breads &amp; Bakery</option>
+              <option value="Chips &amp; Savory Snacks">Chips &amp; Savory Snacks</option>
+              <option value="Chocolates &amp; Candies">Chocolates &amp; Candies</option>
+              <option value="Juices &amp; Beverages">Juices &amp; Beverages</option>
+              <option value="Dairy &amp; Plant Milks">Dairy &amp; Plant Milks</option>
+              <option value="Sauces &amp; Condiments">Sauces &amp; Condiments</option>
+              <option value="Protein &amp; Energy Bars">Protein &amp; Energy Bars</option>
               <option value="General Packaged Food" selected>General Packaged Food</option>
             </select>
           </div>
@@ -187,15 +191,15 @@
             <label class="form-label" for="ingredients-input" style="margin-bottom: 0;">
               Ingredients Clause (OCR Extracted or Transcribed) *
             </label>
-            <span style="font-size: 0.78rem; color: var(--text-dim);">Text from all attached photos is combined here</span>
+            <span style="font-size: 0.78rem; color: var(--text-dim);">Verify or edit ingredients below before computing rating</span>
           </div>
-          <textarea id="ingredients-input" name="raw_text" class="form-control" placeholder="Extracted text from attached images will populate here automatically, or paste manually: Wheat flour, sugar, palm oil, INS 500(ii), INS 322..." required></textarea>
+          <textarea id="ingredients-input" name="raw_text" class="form-control" rows="5" placeholder="Extracted text from attached images will populate here automatically, or paste manually: Wheat flour, sugar, palm oil, INS 500(ii), INS 322..." required></textarea>
         </div>
 
         <!-- Submit Button -->
         <div style="margin-top: 1.75rem;">
           <button type="submit" id="submit-analysis-btn" class="btn btn-primary btn-lg" style="width: 100%;">
-            Analyze Ingredients & Compute Rating
+            Analyze Ingredients &amp; Compute Rating
           </button>
         </div>
       </div>
@@ -208,7 +212,7 @@
 <script>
   let cameraInstance = null;
   let ocrInstance = null;
-  const capturedFrames = [];
+  let capturedCount = 0;
 
   document.addEventListener("DOMContentLoaded", () => {
     ocrInstance = new OCREngine({
@@ -219,13 +223,13 @@
     });
     window.ocrInstance = ocrInstance;
 
-    cameraInstance = new CameraManager("camera-video", "camera-select", (dataUrl) => {
-      // Callback when snapshot is taken
-      handleCameraCapture(dataUrl);
+    cameraInstance = new CameraManager("camera-video", "camera-select", async (dataUrl) => {
+      await processAndAttachImage(dataUrl, "captured");
     });
     window.cameraInstance = cameraInstance;
     cameraInstance.init();
 
+    // Live webcam snapshot
     const captureBtn = document.getElementById("capture-btn");
     if (captureBtn) {
       captureBtn.addEventListener("click", () => {
@@ -240,119 +244,103 @@
       });
     }
 
+    // Native mobile camera button
+    const mobileCamBtn = document.getElementById("mobile-cam-btn");
+    const mobileCamInput = document.getElementById("mobile-cam-input");
+    if (mobileCamBtn && mobileCamInput) {
+      mobileCamBtn.addEventListener("click", () => {
+        mobileCamInput.click();
+      });
+      mobileCamInput.addEventListener("change", async (e) => {
+        if (e.target.files && e.target.files[0]) {
+          await processAndAttachImage(e.target.files[0], "captured");
+          e.target.value = "";
+        }
+      });
+    }
+
     initMultiFileUpload();
   });
 
-  function handleCameraCapture(dataUrl) {
-    capturedFrames.push(dataUrl);
+  /**
+   * Compress image client-side, add thumbnail, update hidden form input,
+   * and run OCR with contrast enhancement.
+   */
+  async function processAndAttachImage(source, galleryType = "captured") {
+    try {
+      // 1. Client-side proportional compression (limits file to <250KB)
+      const prep = await OCREngine.preprocess(source, 1800, 0.82);
 
-    // Update hidden inputs
-    const container = document.getElementById("camera-data-container");
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "camera_data[]";
-    input.value = dataUrl;
-    container.appendChild(input);
+      capturedCount++;
 
-    // Update thumbnail gallery
-    const gallerySection = document.getElementById("captured-gallery-section");
-    const thumbnailsGrid = document.getElementById("captured-thumbnails-grid");
-    const countSpan = document.getElementById("captured-count");
+      // 2. Attach compressed base64 to form
+      const container = document.getElementById("camera-data-container");
+      const hiddenInput = document.createElement("input");
+      hiddenInput.type = "hidden";
+      hiddenInput.name = "camera_data[]";
+      hiddenInput.value = prep.compressedDataUrl;
+      container.appendChild(hiddenInput);
 
-    if (gallerySection) gallerySection.style.display = "block";
-    if (countSpan) countSpan.textContent = capturedFrames.length;
+      // 3. Render gallery thumbnail
+      const gallerySection = document.getElementById(galleryType === "captured" ? "captured-gallery-section" : "upload-gallery-section");
+      const thumbnailsGrid = document.getElementById(galleryType === "captured" ? "captured-thumbnails-grid" : "upload-thumbnails-grid");
+      const countSpan = document.getElementById(galleryType === "captured" ? "captured-count" : "upload-count");
 
-    const thumbBox = document.createElement("div");
-    thumbBox.style.position = "relative";
-    thumbBox.style.width = "90px";
-    thumbBox.style.height = "90px";
-    thumbBox.style.borderRadius = "6px";
-    thumbBox.style.overflow = "hidden";
-    thumbBox.style.border = "1px solid var(--border-blue)";
+      if (gallerySection) gallerySection.style.display = "block";
+      if (countSpan) countSpan.textContent = capturedCount;
 
-    const img = document.createElement("img");
-    img.src = dataUrl;
-    img.style.width = "100%";
-    img.style.height = "100%";
-    img.style.objectFit = "cover";
-    thumbBox.appendChild(img);
+      const thumbBox = document.createElement("div");
+      thumbBox.style.position = "relative";
+      thumbBox.style.width = "90px";
+      thumbBox.style.height = "90px";
+      thumbBox.style.borderRadius = "6px";
+      thumbBox.style.overflow = "hidden";
+      thumbBox.style.border = "1px solid var(--border-blue)";
 
-    thumbnailsGrid.appendChild(thumbBox);
+      const img = document.createElement("img");
+      img.src = prep.compressedDataUrl;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "cover";
+      thumbBox.appendChild(img);
 
-    // Run OCR and append text
-    const textArea = document.getElementById("ingredients-input");
-    const existing = textArea.value.trim();
+      if (thumbnailsGrid) thumbnailsGrid.appendChild(thumbBox);
 
-    ocrInstance.recognize(dataUrl).then(newText => {
-      if (newText && newText.trim()) {
-        const cleaned = ocrInstance.formatExtractedText(newText);
-        if (existing) {
-          textArea.value = existing + "\n\n" + cleaned;
-        } else {
-          textArea.value = cleaned;
-        }
-      }
-    });
+      // 4. Run OCR using the high-contrast preprocessed canvas
+      await ocrInstance.recognize(prep.ocrDataUrl);
+
+    } catch (err) {
+      console.error("Error processing image:", err);
+      // Fallback: try raw recognition
+      await ocrInstance.recognize(source);
+    }
   }
 
   function initMultiFileUpload() {
     const fileInput = document.getElementById("file-input");
     const dropzone = document.getElementById("file-dropzone");
-    const gallerySection = document.getElementById("upload-gallery-section");
-    const thumbnailsGrid = document.getElementById("upload-thumbnails-grid");
-    const countSpan = document.getElementById("upload-count");
+    const browseBtn = document.getElementById("browse-photos-btn");
     const addMoreBtn = document.getElementById("add-more-upload-btn");
 
-    if (!fileInput || !dropzone) return;
+    if (!fileInput) return;
 
+    if (browseBtn) {
+      browseBtn.addEventListener("click", () => fileInput.click());
+    }
     if (addMoreBtn) {
       addMoreBtn.addEventListener("click", () => fileInput.click());
     }
 
-    fileInput.addEventListener("change", () => {
+    fileInput.addEventListener("change", async () => {
       const files = Array.from(fileInput.files);
       if (files.length === 0) return;
 
-      if (gallerySection) gallerySection.style.display = "block";
-      if (countSpan) countSpan.textContent = files.length;
-      if (thumbnailsGrid) thumbnailsGrid.innerHTML = "";
+      for (const file of files) {
+        await processAndAttachImage(file, "upload");
+      }
 
-      const textArea = document.getElementById("ingredients-input");
-
-      files.forEach((file, idx) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const dataUrl = e.target.result;
-          const thumbBox = document.createElement("div");
-          thumbBox.style.width = "90px";
-          thumbBox.style.height = "90px";
-          thumbBox.style.borderRadius = "6px";
-          thumbBox.style.overflow = "hidden";
-          thumbBox.style.border = "1px solid var(--border-subtle)";
-
-          const img = document.createElement("img");
-          img.src = dataUrl;
-          img.style.width = "100%";
-          img.style.height = "100%";
-          img.style.objectFit = "cover";
-          thumbBox.appendChild(img);
-          thumbnailsGrid.appendChild(thumbBox);
-
-          // Run OCR across all attached images sequentially
-          ocrInstance.recognize(dataUrl).then(newText => {
-            if (newText && newText.trim()) {
-              const cleaned = ocrInstance.formatExtractedText(newText);
-              const current = textArea.value.trim();
-              if (current) {
-                textArea.value = current + "\n\n" + cleaned;
-              } else {
-                textArea.value = cleaned;
-              }
-            }
-          });
-        };
-        reader.readAsDataURL(file);
-      });
+      // Reset fileInput so heavy multi-megabyte raw files are not submitted in POST payload
+      fileInput.value = "";
     });
   }
 </script>

@@ -69,13 +69,22 @@ def clean_and_normalize_text(raw_text):
         return ""
     
     text = raw_text.replace("\r", " ").replace("\n", " ")
-    match = re.search(r"(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]\s*(.*?)(?:NUTRITIONAL|BEST BEFORE|MFG|NET WT|STORAGE|ALLERGEN INFO|$)", text, re.IGNORECASE)
+    
+    # Isolate ingredients section if explicit ingredients header is present
+    # Only stop at clearly distinct nutrition tables or manufacturer addresses
+    match = re.search(
+        r"(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)",
+        text,
+        re.IGNORECASE
+    )
     if match and len(match.group(1).strip()) > 15:
         isolated = match.group(1).strip()
     else:
         isolated = text
 
-    cleaned = re.sub(r"\s+", " ", isolated).strip()
+    # Remove excessive OCR formatting noise
+    cleaned = re.sub(r"[\t|]+", " ", isolated)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned
 
 def split_into_ingredient_list(text):
@@ -109,7 +118,8 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
 
     clean_text = clean_and_normalize_text(raw_text)
     ingredients_list = split_into_ingredient_list(clean_text)
-    lower_text = " " + clean_text.lower() + " "
+    # Search across both cleaned text and full raw text so no additives or allergens are missed
+    lower_text = " " + raw_text.lower() + " " + clean_text.lower() + " "
 
     # 1. Detect Additives & INS/E Numbers
     detected_additives = []
