@@ -10,7 +10,7 @@
       <span class="badge badge-blue" style="margin-bottom: 0.4rem;">Scanner</span>
       <h1 class="card-title" style="font-size: 1.85rem;">Food Package Scanner</h1>
       <p class="card-subtitle">
-        Scan, capture or upload packaged food labels across iPhone, iPad, Android, or laptop.
+        Scan, capture, or upload packaged food labels to evaluate formulation safety and additives.
       </p>
     </div>
 
@@ -50,7 +50,7 @@
             </select>
           </div>
           <span style="font-size: 0.78rem; color: var(--text-dim);">
-            [iPhone, iPad, Android: Tap "Take Photo" for highest sharpness]
+            Point sensor directly at the ingredients clause
           </span>
         </div>
 
@@ -63,11 +63,8 @@
 
         <!-- Camera & Upload Actions (All visible on same screen) -->
         <div class="camera-controls" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
-          <button type="button" id="mobile-cam-btn" class="btn btn-primary btn-lg" style="font-weight: 700;">
-            Take Photo (Phone / Tablet)
-          </button>
-          <button type="button" id="capture-btn" class="btn btn-outline-blue btn-lg">
-            Capture Photo (Webcam)
+          <button type="button" id="capture-btn" class="btn btn-primary btn-lg" style="font-weight: 700;">
+            Capture Photo
           </button>
           <button type="button" id="browse-photos-btn" class="btn btn-secondary btn-lg">
             Upload from Gallery
@@ -206,11 +203,28 @@
     window.cameraInstance = cameraInstance;
     cameraInstance.init();
 
-    // Live webcam snapshot
+    // Camera snapshot capture
     const captureBtn = document.getElementById("capture-btn");
+    const mobileCamInput = document.getElementById("mobile-cam-input");
+
     if (captureBtn) {
       captureBtn.addEventListener("click", () => {
-        cameraInstance.captureSnapshot();
+        if (cameraInstance && cameraInstance.currentStream && cameraInstance.currentStream.active) {
+          cameraInstance.captureSnapshot();
+        } else if (mobileCamInput) {
+          mobileCamInput.click();
+        } else if (cameraInstance) {
+          cameraInstance.captureSnapshot();
+        }
+      });
+    }
+
+    if (mobileCamInput) {
+      mobileCamInput.addEventListener("change", async (e) => {
+        if (e.target.files && e.target.files[0]) {
+          await processAndDisplayPhoto(e.target.files[0]);
+          e.target.value = "";
+        }
       });
     }
 
@@ -218,21 +232,6 @@
     if (restartBtn) {
       restartBtn.addEventListener("click", () => {
         cameraInstance.startStream();
-      });
-    }
-
-    // Native mobile / iPad camera button
-    const mobileCamBtn = document.getElementById("mobile-cam-btn");
-    const mobileCamInput = document.getElementById("mobile-cam-input");
-    if (mobileCamBtn && mobileCamInput) {
-      mobileCamBtn.addEventListener("click", () => {
-        mobileCamInput.click();
-      });
-      mobileCamInput.addEventListener("change", async (e) => {
-        if (e.target.files && e.target.files[0]) {
-          await processAndDisplayPhoto(e.target.files[0]);
-          e.target.value = "";
-        }
       });
     }
 

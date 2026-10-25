@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Core Dark Theme CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.3">
   <!-- Tesseract.js CDN for instantaneous client-side OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   {% block head %}{% endblock %}
@@ -29,25 +29,27 @@
         </div>
       </a>
 
-      <ul class="nav-links">
-        <li><a href="{{ url_for('scan') }}" class="nav-link {% if request.endpoint == 'scan' %}active{% endif %}">Scan Label</a></li>
-        <li><a href="{{ url_for('compare') }}" class="nav-link {% if request.endpoint == 'compare' %}active{% endif %}">Compare</a></li>
-        <li><a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">History</a></li>
-        <li><a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">Additives Guide</a></li>
-        
-        {% if current_user %}
-          <li>
+      <div class="nav-menu">
+        <ul class="nav-links">
+          <li><a href="{{ url_for('scan') }}" class="nav-link {% if request.endpoint == 'scan' %}active{% endif %}">Scan Label</a></li>
+          <li><a href="{{ url_for('compare') }}" class="nav-link {% if request.endpoint == 'compare' %}active{% endif %}">Compare</a></li>
+          <li><a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">History</a></li>
+          <li><a href="{{ url_for('guide') }}" class="nav-link {% if request.endpoint == 'guide' %}active{% endif %}">Additives Guide</a></li>
+        </ul>
+
+        <div class="nav-auth-group">
+          {% if current_user %}
             <a href="{{ url_for('profile') }}" class="nav-user-badge">
               <span class="nav-avatar">{{ current_user.username[0]|upper }}</span>
               <span>{{ current_user.username }}</span>
             </a>
-          </li>
-          <li><a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Sign Out</a></li>
-        {% else %}
-          <li><a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Sign In</a></li>
-          <li><a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Create Profile</a></li>
-        {% endif %}
-      </ul>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm nav-auth-btn">Sign Out</a>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm nav-auth-btn">Sign In</a>
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm nav-auth-btn">Create Profile</a>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </header>
 
