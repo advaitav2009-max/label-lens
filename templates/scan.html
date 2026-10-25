@@ -36,7 +36,7 @@
     <!-- Scanner Tabs -->
     <div class="scanner-modes">
       <button type="button" class="tab-btn active" data-target="camera-panel">
-        Camera / Live Stream
+        Camera Only
       </button>
       <button type="button" class="tab-btn" data-target="upload-panel">
         Attach Photos / Gallery
@@ -51,7 +51,7 @@
       <!-- Container for single lightweight compressed photo (<100KB) -->
       <div id="camera-data-container"></div>
 
-      <!-- Tab 1: Live Camera Panel -->
+      <!-- Tab 1: Camera Panel -->
       <div id="camera-panel" class="scan-panel">
         <div class="camera-source-picker">
           <label for="camera-select" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
@@ -61,7 +61,7 @@
             <option value="">Querying camera devices...</option>
           </select>
           <span style="font-size: 0.78rem; color: var(--text-dim);">
-            [Tip: On phone or iPad, tap "Take Photo" for highest optical sharpness]
+            [Tip: On iPhone, iPad, or Android, tap "Take Photo" for highest sharpness]
           </span>
         </div>
 
@@ -75,13 +75,13 @@
         <!-- Camera Controls -->
         <div class="camera-controls" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
           <button type="button" id="start-camera-btn" class="btn btn-secondary">
-            Restart Video
+            Restart Camera
           </button>
           <button type="button" id="capture-btn" class="btn btn-primary btn-lg">
-            Capture Video Frame
+            Capture Photo
           </button>
           <button type="button" id="mobile-cam-btn" class="btn btn-outline-blue btn-lg">
-            Take Photo (Phone/iPad Camera)
+            Take Photo (Phone / Tablet Camera)
           </button>
           <input type="file" id="mobile-cam-input" accept="image/*" capture="environment" style="display: none;">
         </div>
@@ -150,7 +150,7 @@
           Product &amp; Portion Specifications
         </h3>
 
-        <div style="display: grid; grid-template-columns: 2fr 1.5fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-row-2col" style="display: grid; grid-template-columns: 2fr 1.5fr; gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" for="product-name">Product Name *</label>
             <input type="text" id="product-name" name="product_name" class="form-control" placeholder="e.g. Maggi 2-Minute Noodles" required>
@@ -173,7 +173,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+        <div class="form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" for="packet-price">Packet Price (Optional)</label>
             <input type="number" id="packet-price" name="packet_price" class="form-control" placeholder="Leave blank if unknown" step="any" min="0">
@@ -267,7 +267,7 @@
         if (!currentActiveDataUrl) return;
         try {
           const rotated = await OCREngine.rotateImage90(currentActiveDataUrl);
-          await processAndDisplayPhoto(rotated, false); // reprocess without clearing text
+          await processAndDisplayPhoto(rotated, true); // replace with rotated OCR text
         } catch (err) {
           console.error("Rotation error:", err);
         }
@@ -285,6 +285,24 @@
       });
     }
 
+    // Safe Form Submit Protection (blocks HTTP 413 & premature empty submits)
+    const form = document.getElementById("scan-form");
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        const fileInp = document.getElementById("file-input");
+        if (fileInp) fileInp.value = "";
+        const mobInp = document.getElementById("mobile-cam-input");
+        if (mobInp) mobInp.value = "";
+
+        const rawText = (document.getElementById("ingredients-input").value || "").trim();
+        if (!rawText || rawText.length < 5) {
+          e.preventDefault();
+          alert("Please capture/upload a label photo or paste ingredient text before submitting.");
+          return false;
+        }
+      });
+    }
+
     initUploadPanel();
   });
 
@@ -292,7 +310,14 @@
    * Processes a photo with compression (<100KB), displays preview,
    * updates form input, and runs OCR with contrast enhancement.
    */
-  async function processAndDisplayPhoto(source, appendMode = true) {
+  async function processAndDisplayPhoto(source, replaceMode = true) {
+    const submitBtn = document.getElementById("submit-analysis-btn");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.dataset.originalText || submitBtn.textContent;
+      submitBtn.textContent = "Reading Ingredients (OCR)...";
+    }
+
     try {
       // 1. Proportional compression to 1400px (<100KB JPEG)
       const prep = await OCREngine.preprocess(source, 1400, 0.78);
@@ -316,11 +341,16 @@
       container.appendChild(hiddenInput);
 
       // 4. Run OCR using the high-contrast preprocessed canvas
-      await ocrInstance.recognize(prep.ocrDataUrl, true);
+      await ocrInstance.recognize(prep.ocrDataUrl, true, replaceMode);
 
     } catch (err) {
       console.error("Error processing photo:", err);
-      await ocrInstance.recognize(source, false);
+      await ocrInstance.recognize(source, false, replaceMode);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitBtn.dataset.originalText || "Analyze Ingredients & Compute Rating";
+      }
     }
   }
 

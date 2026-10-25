@@ -29,7 +29,13 @@ COMMON_FOOD_INDICATORS = [
     "edible", "palm", "sunflower", "groundnut", "peanut", "paste", "puree", "juice",
     "fruit", "curd", "cheese", "sauce", "chilli", "onion", "garlic", "coriander",
     "turmeric", "cumin", "pepper", "cinnamon", "ginger", "clove", "cardamom",
-    "servings", "serving size", "net wt", "net weight", "best before"
+    "servings", "serving size", "net wt", "net weight", "best before",
+    "ins", "additive", "thickener", "acidity regulator", "humectant", "raising agent",
+    "anti-caking", "anticaking", "leavening", "iodised", "iodized", "vegetable",
+    "hydrolysed", "hydrolyzed", "permitted", "nature identical", "artificial",
+    "sweetener", "seasoning", "condiment", "noodle", "noodles", "biscuit", "biscuits",
+    "cookie", "cookies", "cereal", "wafer", "chocolate", "drink", "snack", "crisps", "chips",
+    "fssai", "mfg", "mrp", "pkg", "batch"
 ]
 
 # Optional pytesseract backend support

@@ -945,3 +945,15 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .form-row-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .camera-controls {
+    flex-direction: column;
+  }
+  .camera-controls .btn {
+    width: 100%;
+  }
+}

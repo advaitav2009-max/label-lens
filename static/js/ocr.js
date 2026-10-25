@@ -138,7 +138,7 @@ class OCREngine {
     });
   }
 
-  async recognize(imageSource, isAlreadyPreprocessed = false) {
+  async recognize(imageSource, isAlreadyPreprocessed = false, replaceText = true) {
     if (!imageSource) return "";
 
     if (this.progressContainer) {
@@ -190,10 +190,10 @@ class OCREngine {
 
       if (this.outputTextArea && cleaned.trim().length > 0) {
         const existing = this.outputTextArea.value.trim();
-        if (existing) {
-          this.outputTextArea.value = existing + "\n\n" + cleaned;
-        } else {
+        if (replaceText || !existing) {
           this.outputTextArea.value = cleaned;
+        } else {
+          this.outputTextArea.value = existing + "\n\n" + cleaned;
         }
       }
 
@@ -235,8 +235,9 @@ class OCREngine {
       .trim();
 
     // 2. Fix common OCR character confusions in food ingredients
-    clean = clean.replace(/\b[1l|I]NS\b/gi, "INS");
+    clean = clean.replace(/\b[1l|I]N[\s\.\-]*S\b/gi, "INS");
     clean = clean.replace(/\b[1l|I]ns\b/gi, "INS");
+    clean = clean.replace(/\b[1l|I]ngredients?\b/gi, "Ingredients");
     clean = clean.replace(/INS\s*([0-9]{3,4})/gi, "INS $1");
 
     // 3. Isolate ingredients section safely if marked, without premature cutoff

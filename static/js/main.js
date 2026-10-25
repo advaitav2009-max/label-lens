@@ -5,7 +5,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Mobile / tab navigation handling
   initTabs();
-  initDropzone();
   initSampleSelectors();
 });
 
@@ -36,60 +35,6 @@ function initTabs() {
   });
 }
 
-function initDropzone() {
-  const dropzone = document.getElementById("file-dropzone");
-  const fileInput = document.getElementById("file-input");
-  const imagePreview = document.getElementById("upload-preview");
-  const previewImg = document.getElementById("preview-img");
-
-  if (!dropzone || !fileInput) return;
-
-  dropzone.addEventListener("click", () => fileInput.click());
-
-  dropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropzone.classList.add("dragover");
-  });
-
-  dropzone.addEventListener("dragleave", () => {
-    dropzone.classList.remove("dragover");
-  });
-
-  dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropzone.classList.remove("dragover");
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      fileInput.files = e.dataTransfer.files;
-      handleFileSelected(fileInput.files[0]);
-    }
-  });
-
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files && fileInput.files[0]) {
-      handleFileSelected(fileInput.files[0]);
-    }
-  });
-
-  function handleFileSelected(file) {
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file (PNG, JPG, WEBP).");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      if (previewImg) previewImg.src = dataUrl;
-      if (imagePreview) imagePreview.style.display = "block";
-
-      // Trigger OCR on dropped/selected image
-      if (window.ocrInstance) {
-        window.ocrInstance.recognize(dataUrl);
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-}
 
 function initSampleSelectors() {
   const samplePills = document.querySelectorAll(".sample-product-pill");
