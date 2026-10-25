@@ -19,16 +19,23 @@ class OCREngine {
 
   /**
    * Resizes large camera photos to optimal OCR size (1400px max)
-   * and generates a high-contrast inverted version if dark background is detected.
+   * and produces a clean, lightweight compressed JPEG (<100KB) for Vercel.
+   * Uses URL.createObjectURL for memory safety on iPad / iPhone / Android.
    */
   static async preprocess(source, maxDim = 1400, quality = 0.78) {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      let objectUrl = null;
+
       img.onload = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+
         let width = img.naturalWidth || img.width;
         let height = img.naturalHeight || img.height;
 
-        // Proportional downscale to sweet spot (1200 - 1400px)
+        // Proportional downscale to optimal OCR sweet spot (1200 - 1400px)
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -39,78 +46,40 @@ class OCREngine {
           }
         }
 
-        // 1. Off-screen canvas for lightweight server submission
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Very lightweight compressed JPEG (~80KB)
+        // Highly compressed lightweight JPEG for Vercel payload (<90KB)
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
-
-        // 2. High-contrast grayscale filter for Tesseract
-        const imgData = ctx.getImageData(0, 0, width, height);
-        const d = imgData.data;
-        const len = d.length;
-
-        // Calculate average and min/max luminance
-        let totalLum = 0;
-        let minLum = 255;
-        let maxLum = 0;
-
-        for (let i = 0; i < len; i += 4) {
-          const lum = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
-          totalLum += lum;
-          if (lum < minLum) minLum = lum;
-          if (lum > maxLum) maxLum = lum;
-        }
-
-        const avgLum = totalLum / (len / 4);
-        const range = maxLum - minLum || 1;
-        const isDarkBackground = avgLum < 118; // Invert white text on dark packets
-
-        for (let i = 0; i < len; i += 4) {
-          let lum = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
-
-          // If dark background (e.g. dark chocolate, cola, Oreo), invert so text is dark on light
-          if (isDarkBackground) {
-            lum = 255 - lum;
-          }
-
-          // Dynamic contrast stretch
-          let stretched = ((lum - minLum) / range) * 255;
-          if (stretched < 128) {
-            stretched = Math.max(0, stretched * 0.80);
-          } else {
-            stretched = Math.min(255, stretched * 1.20);
-          }
-
-          d[i] = stretched;
-          d[i + 1] = stretched;
-          d[i + 2] = stretched;
-        }
-
-        ctx.putImageData(imgData, 0, 0);
-        const ocrDataUrl = canvas.toDataURL("image/jpeg", 0.88);
 
         resolve({
           compressedDataUrl,
-          ocrDataUrl,
+          ocrDataUrl: compressedDataUrl,
           width,
           height
         });
       };
 
-      img.onerror = (err) => reject(err);
+      img.onerror = (err) => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        reject(err);
+      };
 
       if (typeof source === "string") {
         img.src = source;
       } else if (source instanceof Blob || source instanceof File) {
-        const reader = new FileReader();
-        reader.onload = (e) => { img.src = e.target.result; };
-        reader.onerror = (err) => reject(err);
-        reader.readAsDataURL(source);
+        try {
+          objectUrl = URL.createObjectURL(source);
+          img.src = objectUrl;
+        } catch (e) {
+          const reader = new FileReader();
+          reader.onload = (ev) => { img.src = ev.target.result; };
+          reader.onerror = reject;
+          reader.readAsDataURL(source);
+        }
       } else {
         reject(new Error("Unsupported image source type"));
       }

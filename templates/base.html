@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Core Dark Theme CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.2">
   <!-- Tesseract.js CDN for instantaneous client-side OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   {% block head %}{% endblock %}
@@ -87,9 +87,9 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="{{ url_for('static', filename='js/ocr.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ocr.js') }}?v=2.2"></script>
+  <script src="{{ url_for('static', filename='js/camera.js') }}?v=2.2"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}?v=2.2"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
