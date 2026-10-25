@@ -4,7 +4,7 @@
 
 {% block content %}
 <div style="max-width: 840px; margin: 0 auto;">
-  <div class="card" style="padding: 2.25rem;">
+  <div class="card scanner-card">
     <!-- Header -->
     <div style="margin-bottom: 1.5rem;">
       <span class="badge badge-blue" style="margin-bottom: 0.4rem;">Scanner</span>
@@ -15,11 +15,11 @@
     </div>
 
     <!-- Quick Sample Selector Pills -->
-    <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.75rem;">
+    <div class="sample-pills-box" style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.75rem;">
       <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 0.5rem;">
         Reference Samples:
       </div>
-      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <div class="sample-pills-container">
         {% for sample in samples %}
           <button type="button" class="btn btn-secondary btn-sm sample-product-pill"
                   data-name="{{ sample.product_name }}"
@@ -63,11 +63,11 @@
 
         <!-- Camera & Upload Actions (All visible on same screen) -->
         <div class="camera-controls" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
-          <button type="button" id="capture-btn" class="btn btn-primary btn-lg">
-            Capture Photo
-          </button>
-          <button type="button" id="mobile-cam-btn" class="btn btn-outline-blue btn-lg">
+          <button type="button" id="mobile-cam-btn" class="btn btn-primary btn-lg" style="font-weight: 700;">
             Take Photo (Phone / Tablet)
+          </button>
+          <button type="button" id="capture-btn" class="btn btn-outline-blue btn-lg">
+            Capture Photo (Webcam)
           </button>
           <button type="button" id="browse-photos-btn" class="btn btn-secondary btn-lg">
             Upload from Gallery

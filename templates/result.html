@@ -75,8 +75,23 @@
 
   {% set analysis = scan.analysis %}
 
-  <!-- Non-Food Warning Banner if detected -->
-  {% if analysis.non_food_warning %}
+  <!-- Cosmetic / Inedible Warning Banner if detected -->
+  {% if analysis.is_cosmetic %}
+    <div class="card" style="border-left: 4px solid var(--danger-text); margin-bottom: 1.75rem; background-color: var(--danger-bg); border-color: var(--danger-border); padding: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <span class="badge badge-danger" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">Inedible Chemical Formulation</span>
+      </div>
+      <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--danger-text); margin-bottom: 0.5rem;">
+        Skincare &amp; Cosmetic Chemicals Detected
+      </h3>
+      <p style="font-size: 0.95rem; color: var(--text-primary); line-height: 1.6; margin-bottom: 0.75rem;">
+        <strong>DO NOT INGEST / DO NOT EAT:</strong> This formulation contains chemical compounds and cosmetic additives (including <strong>{{ analysis.detected_cosmetics|join(', ') }}</strong>) intended strictly for topical skin, hair, or external personal care application.
+      </p>
+      <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin: 0;">
+        This formulation is NOT edible food. Even if labeled or filed as a food item, cosmetic chemical emulsions are harmful to oral health and must not be consumed.
+      </p>
+    </div>
+  {% elif analysis.non_food_warning %}
     <div class="card" style="border-left: 4px solid var(--caution-text); margin-bottom: 1.75rem; background-color: var(--caution-bg); border-color: var(--caution-border);">
       <h3 style="font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--caution-text); margin-bottom: 0.35rem;">
         Non-Food Text Detected
@@ -92,7 +107,9 @@
     <div class="verdict-header">
       <div>
         <span class="verdict-badge-large">
-          {% if scan.verdict_badge == 'safe' %}
+          {% if analysis.is_cosmetic %}
+            Inedible / Non-Food
+          {% elif scan.verdict_badge == 'safe' %}
             Recommended Formulation
           {% elif scan.verdict_badge == 'caution' %}
             Moderate Formulation
@@ -281,7 +298,11 @@
         </div>
       {% else %}
         <div class="breakdown-item safe">
-          No common added sugar synonyms detected in ingredients clause.
+          {% if analysis.is_cosmetic %}
+            Not evaluated: Inedible cosmetic formulation.
+          {% else %}
+            No common added sugar synonyms detected in ingredients clause.
+          {% endif %}
         </div>
       {% endif %}
     </div>
@@ -302,7 +323,11 @@
         </div>
       {% else %}
         <div class="breakdown-item safe">
-          Free from palm olein and hydrogenated vegetable fats.
+          {% if analysis.is_cosmetic %}
+            Not evaluated: Inedible cosmetic formulation.
+          {% else %}
+            Free from palm olein and hydrogenated vegetable fats.
+          {% endif %}
         </div>
       {% endif %}
     </div>
@@ -312,7 +337,7 @@
       <div class="breakdown-header">
         <h4 class="breakdown-title">Beneficial Nutrients</h4>
       </div>
-      {% if analysis.detected_beneficial %}
+      {% if analysis.detected_beneficial and not analysis.is_cosmetic %}
         <p style="font-size: 0.82rem; color: var(--safe-text); font-weight: 600; margin-bottom: 0.75rem;">
           Recognized whole-food ingredients:
         </p>
@@ -323,7 +348,11 @@
         </div>
       {% else %}
         <div class="breakdown-item">
-          No prominent whole grains or functional superfoods identified.
+          {% if analysis.is_cosmetic %}
+            Inedible formulation: Nutritional benefits not applicable.
+          {% else %}
+            No prominent whole grains or functional superfoods identified.
+          {% endif %}
         </div>
       {% endif %}
     </div>

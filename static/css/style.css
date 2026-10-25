@@ -322,6 +322,10 @@ a:hover {
   transition: var(--transition);
 }
 
+.scanner-card {
+  padding: 2.25rem;
+}
+
 .card:hover {
   border-color: var(--border-strong);
 }
@@ -927,33 +931,163 @@ textarea.form-control {
   color: var(--text-primary);
 }
 
-/* Responsive */
+/* Sample Reference Pills Container */
+.sample-pills-container {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive & Mobile Optimization (iPhone, Android, iPad) */
 @media (max-width: 768px) {
   .nav-container {
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem;
   }
   .nav-links {
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
+  }
+  .nav-link {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.82rem;
+  }
+  .main-content {
+    padding: 1.25rem 1rem;
   }
   .verdict-title {
-    font-size: 1.75rem;
+    font-size: 1.65rem;
   }
   .analysis-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 
 @media (max-width: 640px) {
+  .main-content {
+    padding: 0.85rem 0.65rem;
+  }
+
+  .card {
+    padding: 1.15rem;
+    border-radius: var(--radius-md);
+  }
+
+  .scanner-card {
+    padding: 1rem !important;
+  }
+
+  /* Prevent iOS Safari / Android auto-zoom on input focus */
+  .form-control, .form-select, textarea.form-control {
+    font-size: 16px !important;
+  }
+
   .form-row-2col {
     grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
   }
+
+  /* Camera controls & viewport optimized for mobile phones */
+  .camera-source-picker {
+    padding: 0.75rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .camera-source-picker select {
+    min-width: 100%;
+    width: 100% !important;
+  }
+
+  .camera-container {
+    min-height: 240px;
+    max-height: 330px;
+    margin-bottom: 1rem;
+    border-radius: var(--radius-md);
+  }
+
   .camera-controls {
     flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
   }
+
   .camera-controls .btn {
     width: 100%;
+    min-height: 48px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Horizontally swipeable sample chips on mobile touchscreens */
+  .sample-pills-box {
+    padding: 0.75rem 0.85rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .sample-pills-container {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.4rem;
+    scrollbar-width: thin;
+  }
+
+  .sample-pills-container::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .sample-pills-container::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+
+  .sample-product-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.8rem;
+  }
+
+  /* Verdict page phone layout */
+  .verdict-hero {
+    padding: 1.15rem;
+    gap: 1rem;
+    border-radius: var(--radius-md);
+  }
+
+  .verdict-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .score-pill-container {
+    align-self: flex-start;
+  }
+
+  .verdict-title {
+    font-size: 1.4rem;
+    line-height: 1.25;
+  }
+
+  .verdict-recommendation {
+    padding: 0.9rem 1rem;
+    font-size: 0.92rem;
+  }
+
+  .breakdown-card {
+    padding: 1.15rem;
+    border-radius: var(--radius-md);
+  }
+
+  .dropzone {
+    padding: 1.5rem 1rem;
   }
 }

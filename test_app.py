@@ -121,5 +121,31 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertIn(b"Updated Granola Bar", edit_resp.data)
         self.assertIn(b"Product details updated", edit_resp.data)
 
+    def test_cosmetic_skincare_detection(self):
+        # User photographed skincare/cosmetic ingredients and labeled it as Mayonnaise
+        skincare_text = "Ingredients: Water, Dimethicone, Cetearyl Alcohol, Niacinamide, Phenoxyethanol, Disodium EDTA, Fragrance."
+        res = analyze_food_label(skincare_text)
+        
+        self.assertTrue(res["is_cosmetic"])
+        self.assertFalse(res["is_valid_food_label"])
+        self.assertEqual(res["score"], 0)
+        self.assertEqual(res["verdict_badge"], "danger")
+        self.assertIn("Non-Food / Inedible", res["verdict"])
+        self.assertIn("DO NOT EAT / INEDIBLE", res["eat_recommendation"])
+        self.assertGreaterEqual(len(res["detected_cosmetics"]), 3)
+
+        # Test web submission via client
+        resp = self.client.post("/scan", data={
+            "product_name": "Mayonnaise",
+            "category": "Sauces & Condiments",
+            "packet_price": "85",
+            "servings": "10",
+            "raw_text": skincare_text
+        }, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Inedible Chemical Formulation", resp.data)
+        self.assertIn(b"Skincare &amp; Cosmetic Chemicals Detected", resp.data)
+        self.assertIn(b"DO NOT INGEST / DO NOT EAT", resp.data)
+
 if __name__ == "__main__":
     unittest.main()

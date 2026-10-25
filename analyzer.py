@@ -20,22 +20,60 @@ from additives_db import (
 
 COMMON_FOOD_INDICATORS = [
     "ingredients", "ingredient", "contains", "sugar", "salt", "oil", "flour", "wheat",
-    "water", "milk", "butter", "cocoa", "syrup", "extract", "acid", "starch", "flavor",
+    "milk", "butter", "cocoa", "syrup", "extract", "acid", "starch", "flavor",
     "flavour", "preservative", "emulsifier", "stabilizer", "protein", "sodium", "fat",
     "fats", "carbohydrate", "energy", "calories", "kcal", "malt", "yeast", "spices",
     "masala", "powder", "gum", "lecithin", "sorbate", "benzoate", "gluten", "soy",
     "soya", "seeds", "nuts", "oats", "rice", "corn", "dextrose", "fructose", "glucose",
-    "vitamins", "minerals", "calcium", "iron", "barley", "maida", "atta", "cream",
+    "vitamins", "calcium", "iron", "barley", "maida", "atta",
     "edible", "palm", "sunflower", "groundnut", "peanut", "paste", "puree", "juice",
     "fruit", "curd", "cheese", "sauce", "chilli", "onion", "garlic", "coriander",
     "turmeric", "cumin", "pepper", "cinnamon", "ginger", "clove", "cardamom",
     "servings", "serving size", "net wt", "net weight", "best before",
     "ins", "additive", "thickener", "acidity regulator", "humectant", "raising agent",
     "anti-caking", "anticaking", "leavening", "iodised", "iodized", "vegetable",
-    "hydrolysed", "hydrolyzed", "permitted", "nature identical", "artificial",
+    "hydrolysed", "hydrolyzed", "permitted", "nature identical",
     "sweetener", "seasoning", "condiment", "noodle", "noodles", "biscuit", "biscuits",
     "cookie", "cookies", "cereal", "wafer", "chocolate", "drink", "snack", "crisps", "chips",
-    "fssai", "mfg", "mrp", "pkg", "batch"
+    "fssai", "mrp"
+]
+
+# Dedicated Skincare, Cosmetic & Non-Food Chemical Indicators
+COSMETIC_NON_FOOD_INDICATORS = [
+    # Silicones & Synthetic Polymers
+    "dimethicone", "cyclopentasiloxane", "cyclomethicone", "amodimethicone", "dimethiconol",
+    "phenyl trimethicone", "carbomer", "acrylates copolymer", "polyacrylamide", "pvp",
+    "polyquaternium", "silica dimethyl silylate", "trimethylsiloxysilicate",
+    # Cosmetic Preservatives & Biocides (Strictly Inedible)
+    "phenoxyethanol", "methylparaben", "propylparaben", "ethylparaben", "butylparaben",
+    "paraben", "parabens", "ethylhexylglycerin", "chlorphenesin", "dmdm hydantoin",
+    "imidazolidinyl urea", "diazolidinyl urea", "methylisothiazolinone",
+    "methylchloroisothiazolinone", "benzyl alcohol", "dehydroacetic acid",
+    # Surfactants & Foaming Agents
+    "sodium laureth sulfate", "sodium lauryl sulfate", "sles", "sls",
+    "cocamidopropyl betaine", "disodium laureth sulfosuccinate", "sodium cocoyl glycinate",
+    "sodium lauroyl sarcosinate", "ammonium lauryl sulfate", "decyl glucoside",
+    # Cosmetic Emulsifiers & Fatty Alcohols
+    "cetearyl alcohol", "cetyl alcohol", "stearyl alcohol", "behenyl alcohol",
+    "ceteareth-20", "ceteareth", "peg-100 stearate", "peg-40", "peg-7",
+    "polysorbate 20", "polysorbate 60", "polysorbate 80", "triethanolamine",
+    # Active Skincare Chemicals
+    "niacinamide", "salicylic acid", "glycolic acid", "hyaluronic acid", "sodium hyaluronate",
+    "retinol", "retinyl palmitate", "kojic acid", "benzoyl peroxide", "alpha arbutin",
+    "panthenol", "allantoin", "ceramide",
+    # Sunscreen Actives
+    "avobenzone", "octinoxate", "oxybenzone", "homosalate", "octocrylene", "octisalate",
+    "zinc oxide", "titanium dioxide",
+    # Chelators, Fragrances & Mineral Petrochemicals
+    "disodium edta", "tetrasodium edta", "edta", "bht", "parfum", "fragrance",
+    "mineral oil", "paraffinum liquidum", "petrolatum", "petroleum jelly",
+    "isopropyl myristate", "caprylic/capric triglyceride", "octyldodecanol",
+    # External Application & Packaging Clues
+    "for external use only", "external use only", "avoid contact with eyes",
+    "dermatologically tested", "dermatologist tested", "apply on face", "apply to face",
+    "apply on skin", "massage gently", "rinse thoroughly", "body wash", "face wash",
+    "body lotion", "moisturizer", "moisturiser", "cleanser", "sunscreen", "shampoo",
+    "conditioner", "sunblock", "serum", "toner", "lip balm", "skincare", "skin care", "cosmetic"
 ]
 
 # Optional pytesseract backend support
@@ -409,14 +447,27 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
                     "message": f"Custom objective '{cg.title()}' monitored during formulation scan."
                 })
 
-    # 9. Non-Food Content Detection Check
+    # 9. Non-Food Content & Skincare Chemical Detection Check
+    detected_cosmetics = []
+    for c in COSMETIC_NON_FOOD_INDICATORS:
+        pattern = r"\b" + re.escape(c) + r"\b"
+        if re.search(pattern, lower_text):
+            title = c.title()
+            if title not in detected_cosmetics:
+                detected_cosmetics.append(title)
+
+    is_cosmetic = len(detected_cosmetics) >= 1
+
     food_word_count = sum(1 for w in COMMON_FOOD_INDICATORS if re.search(r"\b" + re.escape(w) + r"\b", lower_text))
     total_signals = len(detected_additives) + len(detected_sugars) + len(detected_fats) + len(detected_allergens) + len(detected_beneficial) + food_word_count
 
     is_valid_food_label = True
     non_food_warning = False
 
-    if len(clean_text) < 10:
+    if is_cosmetic:
+        is_valid_food_label = False
+        non_food_warning = True
+    elif len(clean_text) < 10:
         is_valid_food_label = False
         non_food_warning = True
     elif total_signals == 0 and len(clean_text) > 30:
@@ -481,9 +532,21 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
         }
 
     # 11. Scoring Algorithm
-    if not is_valid_food_label:
-        score = 30
-        star_rating = 1.5
+    if is_cosmetic:
+        score = 0
+        star_rating = 1.0
+        verdict = "Non-Food / Inedible (Skincare & Cosmetic Chemicals)"
+        verdict_badge = "danger"
+        cosmetic_summary = ", ".join(detected_cosmetics[:4])
+        eat_recommendation = f"DO NOT EAT / INEDIBLE: This product contains cosmetic chemical compounds ({cosmetic_summary}) formulated strictly for topical skin, hair, or external personal care application. It is NOT a food product and is unsafe for consumption."
+        reasons = [
+            f"Detected chemical cosmetic ingredients: {', '.join(detected_cosmetics[:6])}.",
+            "These synthetic chemicals are non-food cosmetic ingredients strictly intended for external application.",
+            "Do not ingest. If you were attempting to evaluate a food item, please verify that you did not photograph a cosmetic, lotion, or cleanser bottle."
+        ]
+    elif not is_valid_food_label:
+        score = 20
+        star_rating = 1.0
         verdict = "Non-Food Content / Unrecognized Label"
         verdict_badge = "caution"
         eat_recommendation = "Notice: The scanned text does not appear to contain food packaging declarations or ingredient clauses. Please ensure your camera is positioned over the ingredient list or nutritional facts panel."
@@ -590,6 +653,8 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
         "reasons": reasons,
         "is_valid_food_label": is_valid_food_label,
         "non_food_warning": non_food_warning,
+        "is_cosmetic": is_cosmetic,
+        "detected_cosmetics": detected_cosmetics,
         "detected_additives": detected_additives,
         "detected_sugars": detected_sugars,
         "detected_fats": detected_fats,
