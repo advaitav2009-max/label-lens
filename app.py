@@ -580,5 +580,18 @@ with app.app_context():
     if len(existing) == 0:
         seed_sample_scans()
 
+# Register mirrored routes for Vercel serverless environments
+# Ensures all endpoints resolve whether Vercel routes to '/' or '/api/index' or '/api/index/<route>'
+for _rule in list(app.url_map.iter_rules()):
+    if _rule.endpoint != "static" and not _rule.rule.startswith("/api/index"):
+        _clean_rule = "" if _rule.rule == "/" else _rule.rule
+        app.add_url_rule(
+            f"/api/index{_clean_rule}",
+            endpoint=f"vercel_{_rule.endpoint}",
+            view_func=app.view_functions[_rule.endpoint],
+            methods=_rule.methods,
+            strict_slashes=False
+        )
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
