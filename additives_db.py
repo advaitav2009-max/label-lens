@@ -363,6 +363,161 @@ ADDITIVES_CATALOG = {
         "vegan": False,
         "vegetarian": True,
         "description": "Natural wax made by honey bees. Vegetarian, but not vegan."
+    },
+
+    # Acidity Regulators, Thickeners & Humectants (Everyday Packaged Foods)
+    "500": {
+        "name": "Sodium Carbonates (INS 500(i), 500(ii) Baking Soda)",
+        "category": "Acidity Regulator / Raising Agent",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Mineral salts including sodium bicarbonate (baking soda). Completely non-toxic, used for aeration and neutralizing acidity."
+    },
+    "501": {
+        "name": "Potassium Carbonates (INS 501(i), 501(ii))",
+        "category": "Acidity Regulator / Stabilizer",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Mineral salts used to give instant noodles their characteristic springy texture and balance pH."
+    },
+    "508": {
+        "name": "Potassium Chloride (INS 508)",
+        "category": "Gelling Agent / Thickener",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Naturally occurring mineral salt. Often used as a salt substitute and stabilizer to maintain noodle texture."
+    },
+    "451": {
+        "name": "Triphosphates / Pentasodium Triphosphate (INS 451(i))",
+        "category": "Humectant / Stabilizer",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Phosphate salt used to retain moisture in noodles and processed meats. Excessive dietary phosphate intake is linked to kidney and cardiovascular stress."
+    },
+    "450": {
+        "name": "Diphosphates (INS 450)",
+        "category": "Emulsifier / Stabilizer",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Inorganic phosphate salts used as leavening and water-binding agents. Limit habitual consumption."
+    },
+    "452": {
+        "name": "Polyphosphates (INS 452)",
+        "category": "Emulsifier / Stabilizer",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Complex phosphate chain used in processed foods to improve texture. Contributes to ultra-processed food dietary phosphorus load."
+    },
+    "635": {
+        "name": "Disodium 5'-Ribonucleotides (INS 635)",
+        "category": "Flavor Enhancer",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": False,
+        "vegetarian": True,
+        "description": "Synergistic umami enhancer composed of disodium inosinate and guanylate. Widely used in noodle tastemakers and savory chips. May trigger gout; commercial origin can sometimes involve animal/fish precursors."
+    },
+    "503": {
+        "name": "Ammonium Carbonates (INS 503(i), 503(ii) Baker's Ammonia)",
+        "category": "Raising Agent",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Traditional leavening agent used in dry cookies, biscuits, and crackers. Evaporates completely during baking leaving no toxic residue."
+    },
+    "476": {
+        "name": "Polyglycerol Polyricinoleate / PGPR (INS 476)",
+        "category": "Emulsifier",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Castor-bean derived emulsifier used in commercial mass-market chocolates to replace expensive cocoa butter and reduce viscosity."
+    },
+    "551": {
+        "name": "Silicon Dioxide (INS 551)",
+        "category": "Anti-Caking Agent",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Naturally occurring mineral silica. Prevents clump formation in noodle seasonings, spice powders, and instant soup mixes."
+    },
+    "296": {
+        "name": "Malic Acid (INS 296)",
+        "category": "Acidity Regulator",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Natural organic acid responsible for the tart flavor of green apples. Safe and metabolized cleanly by the body."
+    },
+    "334": {
+        "name": "Tartaric Acid (INS 334)",
+        "category": "Acidity Regulator / Antioxidant",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Natural organic acid derived from grapes during winemaking. Adds sour flavor and stabilizes baking powders."
+    },
+    "339": {
+        "name": "Sodium Phosphates (INS 339)",
+        "category": "Buffering Agent / Emulsifier",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Phosphoric acid salt used in processed cheeses and puddings to prevent curdling. Contributes to dietary inorganic phosphorus."
+    },
+    "340": {
+        "name": "Potassium Phosphates (INS 340)",
+        "category": "Stabilizer / Buffering Agent",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Stabilizer and acidity regulator commonly found in non-dairy coffee creamers and protein shakes."
+    },
+    "341": {
+        "name": "Calcium Phosphates (INS 341)",
+        "category": "Raising Agent / Mineral Fortifier",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Calcium salt used in self-rising flours, breakfast cereals, and dough conditioning."
+    },
+    "920": {
+        "name": "L-Cysteine (INS 920)",
+        "category": "Flour Treatment Agent",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": False,
+        "vegetarian": False,
+        "description": "Amino acid used in commercial bakeries to condition dough for high-speed industrial processing. Commonly synthesized from duck feathers or animal bristles; avoid for strict vegetarian or vegan diets."
+    },
+    "150": {
+        "name": "Caramel Colors (INS 150a, 150b, 150c, 150d)",
+        "category": "Food Coloring",
+        "risk": "Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Dark brown coloring made by controlled heating of carbohydrates with ammonia and sulfites. Very prevalent in colas, soy sauces, and bakery items."
     }
 }
 

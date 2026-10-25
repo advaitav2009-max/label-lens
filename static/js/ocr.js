@@ -1,10 +1,12 @@
 /**
  * Label Lens - OCR Engine & Image Processing
+ * Cross-Platform Support for iPhone, iPad, Android, Mac, and Windows
  * Features:
- * - Client-side image resizing and compression (limits payloads to <300KB to prevent 413 errors)
- * - Contrast enhancement & adaptive grayscale preprocessing for packaging labels
- * - Tesseract.js neural recognition with INS number error-correction
- * - Safe ingredient extraction without premature keyword truncation
+ * - Optimal 1400px downscaling & lightweight JPEG compression (<100KB per image)
+ * - Automatic dark-background text inversion (Oreo, chocolate, dark soda labels)
+ * - Contrast stretching & binarization for fine-print readability
+ * - Character error-correction for INS codes (1NS -> INS, lNS -> INS)
+ * - Prevents premature ingredient truncation
  */
 
 class OCREngine {
@@ -16,17 +18,17 @@ class OCREngine {
   }
 
   /**
-   * Resizes large camera photos to optimal OCR size (max 1800px)
-   * and generates a high-contrast version for Tesseract.
+   * Resizes large camera photos to optimal OCR size (1400px max)
+   * and generates a high-contrast inverted version if dark background is detected.
    */
-  static async preprocess(source, maxDim = 1800, quality = 0.82) {
+  static async preprocess(source, maxDim = 1400, quality = 0.78) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         let width = img.naturalWidth || img.width;
         let height = img.naturalHeight || img.height;
 
-        // Proportional downscale if exceeding maxDim
+        // Proportional downscale to sweet spot (1200 - 1400px)
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -37,13 +39,14 @@ class OCREngine {
           }
         }
 
-        // 1. Off-screen canvas for compressed image (used for server submission)
+        // 1. Off-screen canvas for lightweight server submission
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Very lightweight compressed JPEG (~80KB)
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
 
         // 2. High-contrast grayscale filter for Tesseract
@@ -51,7 +54,7 @@ class OCREngine {
         const d = imgData.data;
         const len = d.length;
 
-        // First pass: find luminance range (min / max / avg)
+        // Calculate average and min/max luminance
         let totalLum = 0;
         let minLum = 255;
         let maxLum = 0;
@@ -65,17 +68,22 @@ class OCREngine {
 
         const avgLum = totalLum / (len / 4);
         const range = maxLum - minLum || 1;
+        const isDarkBackground = avgLum < 118; // Invert white text on dark packets
 
-        // Second pass: contrast stretching & binarization bias
         for (let i = 0; i < len; i += 4) {
           let lum = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
-          // Contrast stretch
+
+          // If dark background (e.g. dark chocolate, cola, Oreo), invert so text is dark on light
+          if (isDarkBackground) {
+            lum = 255 - lum;
+          }
+
+          // Dynamic contrast stretch
           let stretched = ((lum - minLum) / range) * 255;
-          // Non-linear contrast curve to make fine print text pop
-          if (stretched < avgLum) {
-            stretched = Math.max(0, stretched * 0.85);
+          if (stretched < 128) {
+            stretched = Math.max(0, stretched * 0.80);
           } else {
-            stretched = Math.min(255, stretched * 1.15);
+            stretched = Math.min(255, stretched * 1.20);
           }
 
           d[i] = stretched;
@@ -84,7 +92,7 @@ class OCREngine {
         }
 
         ctx.putImageData(imgData, 0, 0);
-        const ocrDataUrl = canvas.toDataURL("image/jpeg", 0.90);
+        const ocrDataUrl = canvas.toDataURL("image/jpeg", 0.88);
 
         resolve({
           compressedDataUrl,
@@ -109,32 +117,51 @@ class OCREngine {
     });
   }
 
-  async recognize(imageSource) {
+  /**
+   * Rotates a DataURL image 90 degrees clockwise.
+   */
+  static async rotateImage90(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.height;
+        canvas.height = img.width;
+        const ctx = canvas.getContext("2d");
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((90 * Math.PI) / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  async recognize(imageSource, isAlreadyPreprocessed = false) {
     if (!imageSource) return "";
 
     if (this.progressContainer) {
       this.progressContainer.style.display = "block";
     }
-    this.updateProgress(10, "Optimizing image contrast & resolution...");
+    this.updateProgress(15, "Optimizing label contrast & resolution...");
 
     let targetForOCR = imageSource;
-    let compressedDataUrl = null;
 
-    try {
-      // Preprocess & compress image before running OCR
-      const prep = await OCREngine.preprocess(imageSource);
-      targetForOCR = prep.ocrDataUrl;
-      compressedDataUrl = prep.compressedDataUrl;
-    } catch (prepErr) {
-      console.warn("Preprocessing notice:", prepErr);
-      targetForOCR = imageSource;
+    if (!isAlreadyPreprocessed) {
+      try {
+        const prep = await OCREngine.preprocess(imageSource);
+        targetForOCR = prep.ocrDataUrl;
+      } catch (prepErr) {
+        targetForOCR = imageSource;
+      }
     }
 
-    this.updateProgress(25, "Loading OCR neural model...");
+    this.updateProgress(30, "Scanning ingredient text...");
 
     try {
       if (typeof Tesseract === "undefined") {
-        this.updateProgress(100, "OCR engine ready.");
+        this.updateProgress(100, "OCR model ready.");
         setTimeout(() => {
           if (this.progressContainer) this.progressContainer.style.display = "none";
         }, 1200);
@@ -147,17 +174,17 @@ class OCREngine {
         {
           logger: (m) => {
             if (m.status === 'recognizing text') {
-              const pct = Math.round((m.progress || 0) * 70) + 25;
-              this.updateProgress(pct, `Reading food label text... ${pct}%`);
+              const pct = Math.round((m.progress || 0) * 65) + 30;
+              this.updateProgress(pct, `Reading ingredients... ${pct}%`);
             } else if (m.status === 'loading tesseract core') {
-              this.updateProgress(18, "Loading OCR core...");
+              this.updateProgress(20, "Loading OCR engine...");
             }
           }
         }
       );
 
       const rawText = result.data.text || "";
-      this.updateProgress(100, "Text read successfully!");
+      this.updateProgress(100, "Ingredients extracted!");
 
       const cleaned = this.formatExtractedText(rawText);
 
@@ -178,8 +205,8 @@ class OCREngine {
 
       return cleaned;
     } catch (err) {
-      console.error("Client OCR encountered an error:", err);
-      this.updateProgress(100, "Completed.");
+      console.error("OCR encountered an error:", err);
+      this.updateProgress(100, "OCR ready.");
       setTimeout(() => {
         if (this.progressContainer) this.progressContainer.style.display = "none";
       }, 1200);
@@ -199,7 +226,7 @@ class OCREngine {
   formatExtractedText(text) {
     if (!text) return "";
 
-    // 1. Clean common OCR artifacts
+    // 1. Clean OCR noise and line breaks
     let clean = text
       .replace(/[\r\n]+/g, " ")
       .replace(/[|]+/g, " ")
@@ -208,14 +235,13 @@ class OCREngine {
       .trim();
 
     // 2. Fix common OCR character confusions in food ingredients
-    // Fix '1NS' or 'lNS' to 'INS'
     clean = clean.replace(/\b[1l|I]NS\b/gi, "INS");
     clean = clean.replace(/\b[1l|I]ns\b/gi, "INS");
     clean = clean.replace(/INS\s*([0-9]{3,4})/gi, "INS $1");
 
-    // 3. Isolate ingredients section safely if marked, without premature truncation
+    // 3. Isolate ingredients section safely if marked, without premature cutoff
     const match = clean.match(
-      /(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)/i
+      /(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]?\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)/i
     );
     if (match && match[1] && match[1].trim().length > 15) {
       return match[1].trim();

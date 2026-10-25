@@ -125,22 +125,40 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
     detected_additives = []
     seen_additive_keys = set()
     
-    ins_matches = re.findall(r"(?:INS|E)[\s\-]*(?:No\.?)?[\s\-]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)", lower_text, re.IGNORECASE)
-    paren_matches = re.findall(r"\(([0-9]{3,4}[a-z]?)\)", lower_text)
-    all_codes = set([c.lower() for c in ins_matches + paren_matches])
+    ins_matches = re.findall(
+        r"(?:INS|E|1NS|lNS)[\s\.\-]*(?:No\.?)?[\s\-]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)",
+        lower_text,
+        re.IGNORECASE
+    )
+    paren_matches = re.findall(r"\(([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)\)", lower_text)
+    func_matches = re.findall(
+        r"(?:thickener|acidity regulator|stabilizer|emulsifier|preservative|flavour enhancer|flavor enhancer|colour|color|humectant|raising agent|anti-?caking agent)s?[\s\:]*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)",
+        lower_text,
+        re.IGNORECASE
+    )
+    comma_matches = re.findall(r"(?:,|and|\()\s*([0-9]{3,4}[a-z]?(?:\([iIvVxX0-9]+\))?)\s*(?:\)|,|\b)", lower_text)
+
+    # Normalize codes (e.g. '501(i)' -> '501', '501i' -> '501')
+    raw_extracted_codes = set(ins_matches + paren_matches + func_matches + comma_matches)
+    normalized_codes = set()
+    for c in raw_extracted_codes:
+        normalized_codes.add(c.lower())
+        num_only = re.sub(r"[\(\)iIvVxX\s]", "", c.lower())
+        if num_only:
+            normalized_codes.add(num_only)
 
     for code, details in ADDITIVES_CATALOG.items():
         base_code = code.lower()
         matched = False
-        for c in all_codes:
-            if c.startswith(base_code):
+        for c in normalized_codes:
+            if c.startswith(base_code) or (base_code.startswith(c) and len(c) >= 3):
                 matched = True
                 break
         
         if not matched:
             name_parts = details["name"].lower().split("(")
             primary_name = name_parts[0].strip()
-            if primary_name and primary_name in lower_text:
+            if primary_name and len(primary_name) > 3 and primary_name in lower_text:
                 matched = True
         
         if matched and code not in seen_additive_keys:
