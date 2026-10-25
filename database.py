@@ -60,6 +60,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS scans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
+        device_id TEXT,
         product_name TEXT NOT NULL,
         category TEXT NOT NULL,
         packet_price REAL DEFAULT 0.0,
@@ -77,6 +78,12 @@ def init_db():
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     )
     """)
+
+    # Safe migration for existing schemas lacking device_id column
+    try:
+        cursor.execute("ALTER TABLE scans ADD COLUMN device_id TEXT")
+    except Exception:
+        pass
 
     conn.commit()
     conn.close()
@@ -184,16 +191,17 @@ def get_scans_by_ids(scan_ids):
     return [scans_dict[sid] for sid in scan_ids if sid in scans_dict]
 
 def save_scan(user_id, product_name, category, packet_price, servings, cost_per_serving,
-              image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_dict):
+              image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_dict,
+              device_id=None):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
     INSERT INTO scans (
-        user_id, product_name, category, packet_price, servings, cost_per_serving,
+        user_id, device_id, product_name, category, packet_price, servings, cost_per_serving,
         image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        user_id, product_name, category, packet_price, servings, cost_per_serving,
+        user_id, device_id, product_name, category, packet_price, servings, cost_per_serving,
         image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, json.dumps(analysis_dict)
     ))
     scan_id = cursor.lastrowid
@@ -213,13 +221,18 @@ def get_scan_by_id(scan_id):
         return scan
     return None
 
-def get_user_scans(user_id, limit=50):
+def get_user_scans(user_id=None, device_id=None, limit=50):
     conn = get_db()
     cursor = conn.cursor()
     if user_id:
+        # Show ONLY this logged-in user profile's tested foods
         cursor.execute("SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC LIMIT ?", (user_id, limit))
+    elif device_id:
+        # Show ONLY this device's tested foods when not logged in
+        cursor.execute("SELECT * FROM scans WHERE user_id IS NULL AND device_id = ? ORDER BY created_at DESC LIMIT ?", (device_id, limit))
     else:
-        cursor.execute("SELECT * FROM scans ORDER BY created_at DESC LIMIT ?", (limit,))
+        # Neither user nor device specified: never show global or other people's scans
+        cursor.execute("SELECT * FROM scans WHERE 1 = 0")
     rows = cursor.fetchall()
     conn.close()
     scans = []
@@ -272,12 +285,30 @@ def update_scan(scan_id, product_name, category, packet_price, servings, cost_pe
     conn.commit()
     conn.close()
 
-def delete_scan(scan_id, user_id=None):
+def delete_scan(scan_id, user_id=None, device_id=None):
     conn = get_db()
     cursor = conn.cursor()
     if user_id:
-        cursor.execute("DELETE FROM scans WHERE id = ? AND user_id = ?", (scan_id, user_id))
+        # A logged-in user can delete their own scan, or any unassigned scan from their device
+        if device_id:
+            cursor.execute("""
+                DELETE FROM scans 
+                WHERE id = ? AND (user_id = ? OR (user_id IS NULL AND device_id = ?) OR (user_id IS NULL AND device_id IS NULL))
+            """, (scan_id, user_id, device_id))
+        else:
+            cursor.execute("""
+                DELETE FROM scans 
+                WHERE id = ? AND (user_id = ? OR (user_id IS NULL AND device_id IS NULL))
+            """, (scan_id, user_id))
+    elif device_id:
+        # An anonymous device session can delete scans created on this device (or legacy unassigned scans)
+        cursor.execute("""
+            DELETE FROM scans 
+            WHERE id = ? AND (device_id = ? OR (device_id IS NULL AND user_id IS NULL))
+        """, (scan_id, device_id))
     else:
         cursor.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
+    deleted = cursor.rowcount > 0
     conn.commit()
     conn.close()
+    return deleted

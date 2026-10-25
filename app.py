@@ -64,11 +64,31 @@ with app.app_context():
 
 @app.before_request
 def load_logged_in_user():
+    # 1. Device identification (stored in cookie + session for anonymous device history)
+    device_id = request.cookies.get("device_id") or session.get("device_id")
+    if not device_id:
+        device_id = uuid.uuid4().hex
+        session["device_id"] = device_id
+    g.device_id = device_id
+
+    # 2. User profile session
     user_id = session.get("user_id")
     if user_id is None:
         g.user = None
     else:
         g.user = database.get_user_by_id(user_id)
+
+@app.after_request
+def set_device_cookie(response):
+    if hasattr(g, "device_id") and request.cookies.get("device_id") != g.device_id:
+        response.set_cookie(
+            "device_id",
+            g.device_id,
+            max_age=315360000, # 10 years persistent
+            httponly=True,
+            samesite="Lax"
+        )
+    return response
 
 @app.context_processor
 def inject_user_and_samples():
@@ -305,8 +325,10 @@ def scan():
         primary_image_path = saved_image_rel_paths[0] if saved_image_rel_paths else None
 
         user_id = g.user["id"] if g.user else None
+        device_id = getattr(g, "device_id", None)
         scan_id = database.save_scan(
             user_id=user_id,
+            device_id=device_id,
             product_name=product_name,
             category=category,
             packet_price=packet_price or 0.0,
@@ -422,9 +444,11 @@ def analyze_sample():
 
     cost_per_serving = round(target_sample["packet_price"] / max(1.0, target_sample["servings"]), 2)
     user_id = g.user["id"] if g.user else None
+    device_id = getattr(g, "device_id", None)
 
     scan_id = database.save_scan(
         user_id=user_id,
+        device_id=device_id,
         product_name=target_sample["product_name"],
         category=target_sample["category"],
         packet_price=target_sample["packet_price"],
@@ -457,11 +481,8 @@ def view_scan(scan_id):
 @app.route("/compare")
 def compare():
     user_id = g.user["id"] if g.user else None
-    all_scans = database.get_user_scans(user_id, limit=50)
-
-    if len(all_scans) < 2:
-        seed_sample_scans()
-        all_scans = database.get_user_scans(user_id, limit=50)
+    device_id = getattr(g, "device_id", None)
+    all_scans = database.get_user_scans(user_id=user_id, device_id=device_id, limit=50)
 
     # Allow arbitrary number of products via query params: ?prod=1&prod=2&prod=3
     selected_ids = request.args.getlist("prod", type=int)
@@ -500,7 +521,8 @@ def compare_with(scan_id):
         other_ids = [candidates[0]["id"]]
     else:
         user_id = g.user["id"] if g.user else None
-        all_scans = database.get_user_scans(user_id, limit=10)
+        device_id = getattr(g, "device_id", None)
+        all_scans = database.get_user_scans(user_id=user_id, device_id=device_id, limit=10)
         other_ids = [all_scans[0]["id"]] if all_scans and all_scans[0]["id"] != scan_id else []
 
     params = [f"prod={scan_id}"] + [f"prod={oid}" for oid in other_ids]
@@ -509,14 +531,19 @@ def compare_with(scan_id):
 @app.route("/history")
 def history():
     user_id = g.user["id"] if g.user else None
-    scans = database.get_user_scans(user_id)
+    device_id = getattr(g, "device_id", None)
+    scans = database.get_user_scans(user_id=user_id, device_id=device_id)
     return render_template("history.html", scans=scans)
 
 @app.route("/delete_scan/<int:scan_id>", methods=["POST"])
 def delete_scan_route(scan_id):
     user_id = g.user["id"] if g.user else None
-    database.delete_scan(scan_id, user_id=user_id)
-    flash("Record removed from ledger.", "info")
+    device_id = getattr(g, "device_id", None)
+    deleted = database.delete_scan(scan_id, user_id=user_id, device_id=device_id)
+    if deleted:
+        flash("Record removed from history.", "info")
+    else:
+        flash("Record could not be removed or record not found.", "danger")
     return redirect(url_for("history"))
 
 @app.route("/guide")
@@ -538,47 +565,6 @@ def custom_404(e):
         "QUERY_STRING": request.environ.get("QUERY_STRING"),
         "available_rules": [str(rule) for rule in app.url_map.iter_rules()]
     }), 404
-
-def seed_sample_scans():
-    user_profile = {
-        "allergies": ["peanuts"],
-        "custom_allergies": [],
-        "dietary_preference": "Vegetarian",
-        "avoid_items": ["palm oil"],
-        "health_goals": ["reduced_sugar", "clean_eating"],
-        "custom_goals": [],
-        "budget_target": None
-    }
-    for item in SAMPLE_PRODUCTS[:3]:
-        analysis = analyze_food_label(
-            raw_text=item["raw_text"],
-            user_profile=user_profile,
-            packet_price=item["packet_price"],
-            servings=item["servings"],
-            category=item["category"]
-        )
-        cost_per_serving = round(item["packet_price"] / max(1.0, item["servings"]), 2)
-        database.save_scan(
-            user_id=None,
-            product_name=item["product_name"],
-            category=item["category"],
-            packet_price=item["packet_price"],
-            servings=item["servings"],
-            cost_per_serving=cost_per_serving,
-            image_path=item["image_url"],
-            raw_text=item["raw_text"],
-            clean_ingredients=analysis["clean_ingredients"],
-            overall_score=analysis["score"],
-            star_rating=analysis["star_rating"],
-            verdict=analysis["verdict"],
-            verdict_badge=analysis["verdict_badge"],
-            analysis_dict=analysis
-        )
-
-with app.app_context():
-    existing = database.get_user_scans(None, limit=2)
-    if len(existing) == 0:
-        seed_sample_scans()
 
 # Register mirrored routes for Vercel serverless environments
 # Ensures all endpoints resolve whether Vercel routes to '/' or '/api/index' or '/api/index/<route>'
