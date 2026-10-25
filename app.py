@@ -523,6 +523,22 @@ def delete_scan_route(scan_id):
 def guide():
     return render_template("guide.html")
 
+@app.errorhandler(404)
+def custom_404(e):
+    return jsonify({
+        "error": "Flask 404 Not Found",
+        "path": request.path,
+        "full_path": request.full_path,
+        "url": request.url,
+        "base_url": request.base_url,
+        "PATH_INFO": request.environ.get("PATH_INFO"),
+        "SCRIPT_NAME": request.environ.get("SCRIPT_NAME"),
+        "RAW_URI": request.environ.get("RAW_URI"),
+        "REQUEST_URI": request.environ.get("REQUEST_URI"),
+        "QUERY_STRING": request.environ.get("QUERY_STRING"),
+        "available_rules": [str(rule) for rule in app.url_map.iter_rules()]
+    }), 404
+
 def seed_sample_scans():
     user_profile = {
         "allergies": ["peanuts"],
