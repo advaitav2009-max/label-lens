@@ -33,79 +33,55 @@
       </div>
     </div>
 
-    <!-- Scanner Tabs -->
-    <div class="scanner-modes">
-      <button type="button" class="tab-btn active" data-target="camera-panel">
-        Camera
-      </button>
-      <button type="button" class="tab-btn" data-target="upload-panel">
-        Attach Photos / Gallery
-      </button>
-      <button type="button" class="tab-btn" data-target="text-panel">
-        Manual Text Input
-      </button>
-    </div>
-
     <!-- Scan Form -->
     <form id="scan-form" action="{{ url_for('scan') }}" method="POST" enctype="multipart/form-data">
       <!-- Container for single lightweight compressed photo (<100KB) -->
       <div id="camera-data-container"></div>
 
-      <!-- Tab 1: Camera Panel -->
-      <div id="camera-panel" class="scan-panel">
-        <div class="camera-source-picker">
-          <label for="camera-select" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
-            Input Sensor:
-          </label>
-          <select id="camera-select" class="form-select" style="max-width: 380px;">
-            <option value="">Querying camera devices...</option>
-          </select>
+      <!-- Unified Capture & Upload Section (All on the same screen) -->
+      <div style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+        <div class="camera-source-picker" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div>
+            <label for="camera-select" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+              Camera Sensor:
+            </label>
+            <select id="camera-select" class="form-select" style="display: inline-block; width: auto; min-width: 240px; max-width: 100%;">
+              <option value="">Querying camera devices...</option>
+            </select>
+          </div>
           <span style="font-size: 0.78rem; color: var(--text-dim);">
-            [Tip: On iPhone, iPad, or Android, tap "Take Photo" for highest sharpness]
+            [iPhone, iPad, Android: Tap "Take Photo" for highest sharpness]
           </span>
         </div>
 
-        <div class="camera-container">
+        <div class="camera-container" style="margin-bottom: 1rem;">
           <video id="camera-video" autoplay playsinline muted></video>
           <div class="camera-overlay">
             <div class="camera-target-box"></div>
           </div>
         </div>
 
-        <!-- Camera Controls -->
-        <div class="camera-controls" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
-          <button type="button" id="start-camera-btn" class="btn btn-secondary">
-            Restart Camera
-          </button>
+        <!-- Camera & Upload Actions (All visible on same screen) -->
+        <div class="camera-controls" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
           <button type="button" id="capture-btn" class="btn btn-primary btn-lg">
             Capture Photo
           </button>
           <button type="button" id="mobile-cam-btn" class="btn btn-outline-blue btn-lg">
-            Take Photo (Phone / Tablet Camera)
+            Take Photo (Phone / Tablet)
+          </button>
+          <button type="button" id="browse-photos-btn" class="btn btn-secondary btn-lg">
+            Upload from Gallery
+          </button>
+          <button type="button" id="start-camera-btn" class="btn btn-secondary btn-sm">
+            Restart Camera
           </button>
           <input type="file" id="mobile-cam-input" accept="image/*" capture="environment" style="display: none;">
-        </div>
-      </div>
-
-      <!-- Tab 2: File Upload Panel -->
-      <div id="upload-panel" class="scan-panel" style="display: none;">
-        <div id="file-dropzone" class="dropzone">
-          <div style="font-size: 0.85rem; font-weight: 700; color: var(--blue-400); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.5rem;">
-            Select Package Photo
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-            Select packaging photo from photo library or drive. PNG, JPG, JPEG, WEBP.
-          </p>
-          <button type="button" id="browse-photos-btn" class="btn btn-primary btn-sm">Browse Photos</button>
           <input type="file" id="file-input" accept="image/*" style="display: none;">
         </div>
-      </div>
 
-      <!-- Tab 3: Text Direct Input Panel -->
-      <div id="text-panel" class="scan-panel" style="display: none;">
-        <div style="background-color: var(--bg-surface-elevated); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1rem;">
-          <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
-            Paste or transcribe ingredients directly into the <strong>Ingredients Clause</strong> field below.
+        <div id="file-dropzone" class="dropzone" style="padding: 1rem 1.5rem; text-align: center; border: 1px dashed var(--border-blue); border-radius: var(--radius-sm); background-color: var(--bg-canvas); cursor: pointer;">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+            Or drag &amp; drop a label photo here from your library / files (PNG, JPG, WEBP)
           </p>
         </div>
       </div>
