@@ -479,7 +479,7 @@ def scan():
             analysis_dict=analysis
         )
 
-        # Cache scan in signed session cookie for serverless container persistence
+        # Cache compact scan in signed session cookie (< 250 bytes) to stay safely within 4096-byte cookie limits
         recent_scans = session.get("recent_scans", [])
         scan_entry = {
             "id": scan_id,
@@ -491,16 +491,14 @@ def scan():
             "servings": servings or 0.0,
             "cost_per_serving": cost_per_serving,
             "image_path": primary_image_path,
-            "raw_text": raw_text,
-            "clean_ingredients": analysis["clean_ingredients"],
+            "clean_ingredients": analysis["clean_ingredients"][:120],
             "overall_score": analysis["score"],
             "star_rating": analysis["star_rating"],
             "verdict": analysis["verdict"],
             "verdict_badge": analysis["verdict_badge"],
-            "analysis": analysis,
             "created_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         }
-        recent_scans = [s for s in recent_scans if s.get("id") != scan_id and s.get("product_name") != product_name][:10]
+        recent_scans = [s for s in recent_scans if s.get("id") != scan_id and s.get("product_name") != product_name][:5]
         recent_scans.insert(0, scan_entry)
         session["recent_scans"] = recent_scans
         session.permanent = True
@@ -625,7 +623,7 @@ def analyze_sample():
         analysis_dict=analysis
     )
 
-    # Cache sample analysis in signed session cookie
+    # Cache compact sample analysis in signed session cookie (< 250 bytes)
     recent_scans = session.get("recent_scans", [])
     scan_entry = {
         "id": scan_id,
@@ -637,16 +635,14 @@ def analyze_sample():
         "servings": target_sample["servings"],
         "cost_per_serving": cost_per_serving,
         "image_path": target_sample["image_url"],
-        "raw_text": target_sample["raw_text"],
-        "clean_ingredients": analysis["clean_ingredients"],
+        "clean_ingredients": analysis["clean_ingredients"][:120],
         "overall_score": analysis["score"],
         "star_rating": analysis["star_rating"],
         "verdict": analysis["verdict"],
         "verdict_badge": analysis["verdict_badge"],
-        "analysis": analysis,
         "created_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     }
-    recent_scans = [s for s in recent_scans if s.get("id") != scan_id and s.get("product_name") != target_sample["product_name"]][:10]
+    recent_scans = [s for s in recent_scans if s.get("id") != scan_id and s.get("product_name") != target_sample["product_name"]][:5]
     recent_scans.insert(0, scan_entry)
     session["recent_scans"] = recent_scans
     session.permanent = True
@@ -687,11 +683,17 @@ def compare():
     if p2_legacy and p2_legacy not in selected_ids:
         selected_ids.append(p2_legacy)
 
-    # Defaults if none selected
-    if not selected_ids and len(all_scans) >= 2:
-        selected_ids = [all_scans[0]["id"], all_scans[1]["id"]]
-    elif not selected_ids and len(all_scans) == 1:
-        selected_ids = [all_scans[0]["id"]]
+    # Ensure selected IDs are valid within all_scans
+    available_ids = [s["id"] for s in all_scans]
+    valid_selected = [sid for sid in selected_ids if sid in available_ids]
+
+    # Defaults: auto-select all available scans (up to 4) so comparison matrix populates immediately
+    if len(valid_selected) < 2 and len(available_ids) >= 2:
+        selected_ids = available_ids[:4]
+    elif not valid_selected and len(available_ids) == 1:
+        selected_ids = available_ids[:1]
+    else:
+        selected_ids = valid_selected
 
     products = database.get_scans_by_ids(selected_ids)
 
@@ -713,12 +715,12 @@ def compare_with(scan_id):
 
     candidates = database.get_scans_by_category(primary["category"], exclude_id=scan_id)
     if candidates:
-        other_ids = [candidates[0]["id"]]
+        other_ids = [c["id"] for c in candidates[:3]]
     else:
         user_id = g.user["id"] if g.user else None
         device_id = getattr(g, "device_id", None)
         all_scans = database.get_user_scans(user_id=user_id, device_id=device_id, limit=10)
-        other_ids = [all_scans[0]["id"]] if all_scans and all_scans[0]["id"] != scan_id else []
+        other_ids = [s["id"] for s in all_scans if s["id"] != scan_id][:3]
 
     params = [f"prod={scan_id}"] + [f"prod={oid}" for oid in other_ids]
     return redirect(f"/compare?{'&'.join(params)}")
@@ -752,11 +754,19 @@ def sync_scans():
     try:
         data = request.get_json(force=True, silent=True) or {}
         client_scans = data.get("scans", [])
-        if not client_scans:
-            return jsonify({"status": "empty", "synced": 0})
+        deleted_ids = data.get("deleted_ids", [])
 
         user_id = g.user["id"] if g.user else None
         device_id = getattr(g, "device_id", None)
+
+        if deleted_ids:
+            try:
+                database.delete_scans_by_ids(deleted_ids, user_id=user_id, device_id=device_id)
+            except Exception:
+                pass
+
+        if not client_scans:
+            return jsonify({"status": "empty", "synced": 0, "synced_new": 0})
 
         for s in client_scans:
             if user_id and not s.get("user_id"):
@@ -764,18 +774,26 @@ def sync_scans():
             if device_id and not s.get("device_id"):
                 s["device_id"] = device_id
 
-        database.restore_scans_from_session(client_scans)
+        synced_new = database.restore_scans_from_session(client_scans)
 
+        # Cache compact summary in session (< 1KB)
         recent = session.get("recent_scans", [])
-        existing_ids = {s.get("id") for s in recent}
+        existing_names = {s.get("product_name") for s in recent}
         for s in client_scans:
-            if s.get("id") not in existing_ids:
-                recent.append(s)
-                existing_ids.add(s.get("id"))
-        session["recent_scans"] = recent[:10]
+            if s.get("product_name") not in existing_names:
+                recent.append({
+                    "id": s.get("id"),
+                    "product_name": s.get("product_name"),
+                    "category": s.get("category"),
+                    "star_rating": s.get("star_rating"),
+                    "verdict": s.get("verdict"),
+                    "verdict_badge": s.get("verdict_badge")
+                })
+                existing_names.add(s.get("product_name"))
+        session["recent_scans"] = recent[:5]
         session.permanent = True
 
-        return jsonify({"status": "ok", "synced": len(client_scans)})
+        return jsonify({"status": "ok", "synced": len(client_scans), "synced_new": synced_new})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 

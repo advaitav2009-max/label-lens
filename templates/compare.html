@@ -183,19 +183,66 @@
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     try {
-      const localScans = JSON.parse(localStorage.getItem("label_lens_scans") || "[]");
-      const serverCount = {{ all_scans|length }};
+      // 1. Ingest server-rendered scans into local storage
+      const serverScans = [
+        {% for s in all_scans %}
+        {
+          id: {{ s.id }},
+          user_id: {{ s.user_id|tojson }},
+          device_id: {{ s.device_id|tojson }},
+          product_name: {{ s.product_name|tojson }},
+          category: {{ s.category|tojson }},
+          packet_price: {{ s.packet_price or 0.0 }},
+          servings: {{ s.servings or 1.0 }},
+          cost_per_serving: {{ s.cost_per_serving or 0.0 }},
+          image_path: {{ s.image_path|tojson }},
+          raw_text: {{ s.raw_text|tojson }},
+          clean_ingredients: {{ s.clean_ingredients|tojson }},
+          overall_score: {{ s.overall_score }},
+          star_rating: {{ s.star_rating }},
+          verdict: {{ s.verdict|tojson }},
+          verdict_badge: {{ s.verdict_badge|tojson }},
+          analysis: {{ s.analysis|tojson if s.analysis else (s.analysis_json|safe if s.analysis_json else '{}') }},
+          created_at: {{ s.created_at|tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ];
 
-      if (serverCount === 0 && localScans.length > 0) {
+      let localScans = JSON.parse(localStorage.getItem("label_lens_scans") || "[]");
+      const deletedIds = JSON.parse(localStorage.getItem("label_lens_deleted_ids") || "[]");
+
+      // Filter out deleted items
+      localScans = localScans.filter(function(s) { return !deletedIds.includes(s.id); });
+
+      // Bidirectional merge: absorb server-rendered scans into local storage
+      serverScans.forEach(function(ss) {
+        if (!deletedIds.includes(ss.id)) {
+          const exists = localScans.some(function(ls) {
+            return ls.id === ss.id || (ls.product_name && ss.product_name && ls.product_name.trim().toLowerCase() === ss.product_name.trim().toLowerCase());
+          });
+          if (!exists) {
+            localScans.push(ss);
+          }
+        }
+      });
+      localStorage.setItem("label_lens_scans", JSON.stringify(localScans));
+
+      // 2. Synchronize combined ledger back to the current serverless container
+      if (localScans.length > 0 || deletedIds.length > 0) {
         fetch("{{ url_for('sync_scans') }}", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scans: localScans })
+          body: JSON.stringify({ scans: localScans, deleted_ids: deletedIds })
         }).then(function(res) {
           return res.json();
         }).then(function(data) {
-          if (data.synced > 0) {
-            window.location.reload();
+          // If the container was missing scans and newly restored them, reload once to display them
+          if (data.synced_new > 0) {
+            const reloadKey = "compare_synced_" + localScans.length;
+            if (!sessionStorage.getItem(reloadKey)) {
+              sessionStorage.setItem(reloadKey, "1");
+              window.location.reload();
+            }
           }
         }).catch(function(err) {
           console.error("Compare sync notice:", err);

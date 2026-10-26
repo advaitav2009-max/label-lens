@@ -638,5 +638,96 @@ class LabelLensTestCase(unittest.TestCase):
         hist_resp = self.client.get("/history")
         self.assertIn(b"Synced Almond Milk", hist_resp.data)
 
+    def test_three_products_sync_and_coexist_in_history_and_compare(self):
+        # User scenario: Rose Green Tea, Dandelion Green Tea, and Peanuts
+        r1 = self.client.post("/scan", data={
+            "product_name": "Rose Green Tea",
+            "category": "Beverages & Tea",
+            "packet_price": "240",
+            "servings": "20",
+            "raw_text": "Ingredients: Green Tea Leaves, Rose Petals."
+        }, follow_redirects=True)
+        self.assertEqual(r1.status_code, 200)
+
+        r2 = self.client.post("/scan", data={
+            "product_name": "Dandelion Green Tea",
+            "category": "Beverages & Tea",
+            "packet_price": "260",
+            "servings": "25",
+            "raw_text": "Ingredients: Green Tea Leaves, Dandelion Root."
+        }, follow_redirects=True)
+        self.assertEqual(r2.status_code, 200)
+
+        r3 = self.client.post("/scan", data={
+            "product_name": "Roasted Salted Peanuts",
+            "category": "Nuts & Snacks",
+            "packet_price": "60",
+            "servings": "2",
+            "raw_text": "Ingredients: Peanuts 98%, Edible Vegetable Oil, Salt."
+        }, follow_redirects=True)
+        self.assertEqual(r3.status_code, 200)
+
+        # 1. Verify all three exist in History
+        hist = self.client.get("/history")
+        self.assertEqual(hist.status_code, 200)
+        self.assertIn(b"Rose Green Tea", hist.data)
+        self.assertIn(b"Dandelion Green Tea", hist.data)
+        self.assertIn(b"Roasted Salted Peanuts", hist.data)
+
+        # 2. Verify all three exist in Compare (chips and comparison cards)
+        comp = self.client.get("/compare")
+        self.assertEqual(comp.status_code, 200)
+        self.assertIn(b"Rose Green Tea", comp.data)
+        self.assertIn(b"Dandelion Green Tea", comp.data)
+        self.assertIn(b"Roasted Salted Peanuts", comp.data)
+
+        # 3. Simulate another container missing Rose Green Tea
+        conn = database.get_db()
+        conn.execute("DELETE FROM scans WHERE product_name = 'Rose Green Tea'")
+        conn.commit()
+        conn.close()
+
+        # Syncing from client restores the missing product and reports synced_new = 1
+        rose_scan = {
+            "id": 88881234,
+            "product_name": "Rose Green Tea",
+            "category": "Beverages & Tea",
+            "packet_price": 240.0,
+            "servings": 20.0,
+            "cost_per_serving": 12.0,
+            "overall_score": 85,
+            "star_rating": 4.2,
+            "verdict": "Safe & Clean Formulation",
+            "verdict_badge": "safe",
+            "analysis": {
+                "detected_additives": [],
+                "detected_sugars": [],
+                "detected_fats": [],
+                "detected_beneficial": ["Green Tea", "Rose Petals"],
+                "user_allergen_warnings": [],
+                "diet_conflicts": []
+            },
+            "created_at": "2026-10-26 15:00:00"
+        }
+        sync_resp = self.client.post(
+            "/api/sync_scans",
+            data=json.dumps({"scans": [rose_scan]}),
+            content_type="application/json"
+        )
+        self.assertEqual(sync_resp.status_code, 200)
+        sync_data = json.loads(sync_resp.data)
+        self.assertEqual(sync_data["synced_new"], 1)
+
+        # History and Compare both display all 3 again
+        hist_restored = self.client.get("/history")
+        self.assertIn(b"Rose Green Tea", hist_restored.data)
+        self.assertIn(b"Dandelion Green Tea", hist_restored.data)
+        self.assertIn(b"Roasted Salted Peanuts", hist_restored.data)
+
+        comp_restored = self.client.get("/compare")
+        self.assertIn(b"Rose Green Tea", comp_restored.data)
+        self.assertIn(b"Dandelion Green Tea", comp_restored.data)
+        self.assertIn(b"Roasted Salted Peanuts", comp_restored.data)
+
 if __name__ == "__main__":
     unittest.main()

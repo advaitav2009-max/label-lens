@@ -7,6 +7,8 @@ import sqlite3
 import os
 import json
 import shutil
+import time
+import random
 from datetime import datetime
 
 # Serverless detection (Vercel, AWS Lambda, or read-only container)
@@ -243,19 +245,20 @@ def save_scan(user_id, product_name, category, packet_price, servings, cost_per_
               device_id=None):
     conn = get_db()
     cursor = conn.cursor()
+    # Generate globally unique millisecond-timestamp integer ID to prevent collisions across Vercel micro-VMs
+    unique_scan_id = int(time.time() * 1000) * 1000 + random.randint(100, 999)
     cursor.execute("""
     INSERT INTO scans (
-        user_id, device_id, product_name, category, packet_price, servings, cost_per_serving,
+        id, user_id, device_id, product_name, category, packet_price, servings, cost_per_serving,
         image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, analysis_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        user_id, device_id, product_name, category, packet_price, servings, cost_per_serving,
+        unique_scan_id, user_id, device_id, product_name, category, packet_price, servings, cost_per_serving,
         image_path, raw_text, clean_ingredients, overall_score, star_rating, verdict, verdict_badge, json.dumps(analysis_dict)
     ))
-    scan_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    return scan_id
+    return unique_scan_id
 
 def get_scan_by_id(scan_id):
     conn = get_db()
@@ -285,18 +288,35 @@ def restore_scans_from_session(scans_list):
     """
     Restores or synchronizes scans from session or client storage into the current container SQLite DB.
     Ensures scans persist across ephemeral serverless micro-VMs on Vercel.
+    Returns the number of newly inserted scans.
     """
     if not scans_list:
-        return
+        return 0
     conn = get_db()
     cursor = conn.cursor()
+    inserted_count = 0
     for s in scans_list:
         if not s or not s.get("product_name"):
             continue
         try:
-            cursor.execute("SELECT id FROM scans WHERE id = ?", (s.get("id"),))
-            if cursor.fetchone():
-                continue
+            scan_id = s.get("id")
+            prod_name = str(s.get("product_name", "")).strip()
+
+            if scan_id:
+                cursor.execute("SELECT id, product_name FROM scans WHERE id = ?", (scan_id,))
+                existing = cursor.fetchone()
+                if existing:
+                    # Same ID and matching product name: already present in container
+                    if existing["product_name"].strip().lower() == prod_name.lower():
+                        continue
+                    else:
+                        # Legacy ID collision between different products: assign unique ID
+                        scan_id = int(time.time() * 1000) * 1000 + random.randint(100, 999)
+            else:
+                cursor.execute("SELECT id FROM scans WHERE product_name = ? AND created_at = ?", (prod_name, s.get("created_at")))
+                if cursor.fetchone():
+                    continue
+                scan_id = int(time.time() * 1000) * 1000 + random.randint(100, 999)
 
             analysis_val = s.get("analysis") or s.get("analysis_result") or {}
             if isinstance(analysis_val, dict):
@@ -311,10 +331,10 @@ def restore_scans_from_session(scans_list):
                 overall_score, star_rating, verdict, verdict_badge, analysis_json, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                s.get("id"),
+                scan_id,
                 s.get("user_id"),
                 s.get("device_id"),
-                s.get("product_name"),
+                prod_name,
                 s.get("category", "General Packaged Food"),
                 s.get("packet_price", 0.0) or 0.0,
                 s.get("servings", 1.0) or 1.0,
@@ -329,10 +349,12 @@ def restore_scans_from_session(scans_list):
                 analysis_json,
                 s.get("created_at") or datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
             ))
+            inserted_count += 1
         except Exception as e:
             print(f"Error restoring scan: {e}")
     conn.commit()
     conn.close()
+    return inserted_count
 
 def get_user_scans(user_id=None, device_id=None, limit=50):
     conn = get_db()
@@ -426,6 +448,38 @@ def delete_scan(scan_id, user_id=None, device_id=None):
     else:
         cursor.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
     deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+def delete_scans_by_ids(scan_ids, user_id=None, device_id=None):
+    if not scan_ids:
+        return 0
+    valid_ids = [int(i) for i in scan_ids if str(i).isdigit()]
+    if not valid_ids:
+        return 0
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in valid_ids)
+    if user_id:
+        if device_id:
+            cursor.execute(f"""
+                DELETE FROM scans 
+                WHERE id IN ({placeholders}) AND (user_id = ? OR (user_id IS NULL AND device_id = ?) OR (user_id IS NULL AND device_id IS NULL))
+            """, (*valid_ids, user_id, device_id))
+        else:
+            cursor.execute(f"""
+                DELETE FROM scans 
+                WHERE id IN ({placeholders}) AND (user_id = ? OR (user_id IS NULL AND device_id IS NULL))
+            """, (*valid_ids, user_id))
+    elif device_id:
+        cursor.execute(f"""
+            DELETE FROM scans 
+            WHERE id IN ({placeholders}) AND (device_id = ? OR (device_id IS NULL AND user_id IS NULL))
+        """, (*valid_ids, device_id))
+    else:
+        cursor.execute(f"DELETE FROM scans WHERE id IN ({placeholders})", valid_ids)
+    deleted = cursor.rowcount
     conn.commit()
     conn.close()
     return deleted

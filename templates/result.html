@@ -514,7 +514,13 @@
       };
       let localScans = JSON.parse(localStorage.getItem("label_lens_scans") || "[]");
       localScans = localScans.filter(function(s) {
-        return s.id !== currentScan.id && s.product_name !== currentScan.product_name;
+        if (!s || !s.product_name) return false;
+        // Never remove a scan with a different product name
+        if (s.product_name.trim().toLowerCase() !== currentScan.product_name.trim().toLowerCase()) {
+          return true;
+        }
+        // Same product: replace with this latest scan
+        return false;
       });
       localScans.unshift(currentScan);
       if (localScans.length > 50) localScans = localScans.slice(0, 50);
