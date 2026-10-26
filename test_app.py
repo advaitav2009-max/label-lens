@@ -341,8 +341,8 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertTrue(res_gibberish["is_blurry"])
         self.assertEqual(res_gibberish["verdict"], "Blurry / Illegible Image - Retake Photo")
 
-        # 3. Short random keystrokes
-        short_random = "asdf qwer zxcv 1234"
+        # 3. Severe consonant motion blur smear
+        short_random = "q z x c v b n m"
         res_random = analyze_food_label(short_random)
         self.assertTrue(res_random["is_blurry"])
         self.assertFalse(res_random["is_valid_food_label"])

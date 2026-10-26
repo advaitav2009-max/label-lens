@@ -329,9 +329,8 @@
       if (previewBox && previewImg) {
         previewImg.src = prep.compressedDataUrl;
         previewBox.style.display = "block";
-        if (blurBox) {
-          blurBox.style.display = prep.isVeryBlurry ? "block" : "none";
-        }
+        // Do not prematurely warn about blur before OCR has had a chance to extract text
+        if (blurBox) blurBox.style.display = "none";
         try {
           previewBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } catch (e) {}
@@ -348,6 +347,12 @@
 
       // 4. Run OCR using the high-contrast preprocessed canvas
       await ocrInstance.recognize(prep.ocrDataUrl, true, replaceMode);
+
+      // 5. Only advise retake if image was severely blurry (<7 variance) AND OCR actually failed to resolve text
+      if (blurBox) {
+        const textVal = (document.getElementById("ingredients-input").value || "").trim();
+        blurBox.style.display = (prep.isVeryBlurry && textVal.length < 15) ? "block" : "none";
+      }
 
     } catch (err) {
       console.error("Error processing photo:", err);

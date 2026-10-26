@@ -56,8 +56,9 @@ class OCREngine {
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
 
         // Fast Laplacian variance blur assessment on downscaled canvas
+        // Only flags genuinely severe, featureless smearing (< 7)
         const blurScore = OCREngine.calculateBlurScore(canvas);
-        const isVeryBlurry = blurScore < 20;
+        const isVeryBlurry = blurScore < 7;
 
         resolve({
           compressedDataUrl,

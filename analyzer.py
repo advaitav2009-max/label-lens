@@ -591,8 +591,8 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
     if is_cosmetic:
         is_valid_food_label = False
         non_food_warning = True
-    elif len(cleaned_alpha) < 8:
-        # Extremely sparse or smeared typography
+    elif len(cleaned_alpha) < 6:
+        # Extremely sparse or featureless OCR fragment from severe blur (e.g. 1-5 letters like 'qaff', '.. - _')
         is_valid_food_label = False
         non_food_warning = True
         is_blurry = True
@@ -604,13 +604,10 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
         vowel_words = [w for w in words if re.search(r"[aeiouy]", w) and len(w) >= 3]
         vowel_ratio = len(vowel_words) / max(1, len(words))
 
-        if not has_doc_words:
-            # If total_signals == 0 and there are no document keywords:
-            # Short text (< 55 chars), few words (< 6 words), or low vowel ratio indicates blurry / partial OCR fragments (e.g. 'qaff')
-            if len(clean_text) < 55 or len(words) < 6 or vowel_ratio < 0.50:
-                is_blurry = True
-            else:
-                is_non_food = True
+        # Only classify as blurry if OCR yielded severe motion-blur consonant noise with virtually zero vowels (<0.15)
+        # Never nag user to retake if characters form pronounceable words or sentences
+        if not has_doc_words and vowel_ratio < 0.15 and len(cleaned_alpha) < 20:
+            is_blurry = True
         else:
             is_non_food = True
 
