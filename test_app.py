@@ -729,5 +729,75 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertIn(b"Dandelion Green Tea", comp_restored.data)
         self.assertIn(b"Roasted Salted Peanuts", comp_restored.data)
 
+    def test_user_profile_preservation_and_login_after_logout_and_container_wipe(self):
+        # 1. Register a user profile with specific preferences
+        u_name = f"vault_user_{uuid.uuid4().hex[:6]}"
+        u_pass = "VaultSecret2026!"
+        reg = self.client.post("/register", data={
+            "username": u_name,
+            "email": f"{u_name}@testdomain.com",
+            "password": u_pass,
+            "dietary_preference": "Vegan",
+            "allergies": ["milk", "soy"],
+            "custom_allergies": "almonds",
+            "health_goals": ["reduced_sugar"],
+            "custom_goals": "zero palm oil",
+            "avoid_items": "palm oil",
+            "budget_target": "80.0",
+            "currency": "₹"
+        }, follow_redirects=True)
+        self.assertEqual(reg.status_code, 200)
+
+        # 2. User scans a product while logged in
+        tea_text = "Ingredients: 100% Organic Chamomile and Mint Leaves."
+        scan_res = self.client.post("/scan", data={
+            "product_name": "Organic Chamomile Tea",
+            "category": "Beverages & Tea",
+            "packet_price": "220",
+            "servings": "20",
+            "raw_text": tea_text
+        }, follow_redirects=True)
+        self.assertEqual(scan_res.status_code, 200)
+
+        # 3. User explicitly logs out
+        logout_res = self.client.get("/logout", follow_redirects=True)
+        self.assertEqual(logout_res.status_code, 200)
+        self.assertIn(b"Sign In", logout_res.data)
+        self.assertNotIn(b"Sign Out", logout_res.data)
+
+        # 4. Simulate fresh serverless container (wiping SQLite database completely)
+        conn = database.get_db()
+        conn.execute("DELETE FROM users WHERE username = ?", (u_name,))
+        conn.commit()
+        conn.close()
+
+        # Verify user is completely absent from this container's SQLite database
+        self.assertIsNone(database.get_user_by_username(u_name))
+
+        # 5. User logs back in: must NOT show invalid credentials and must restore profile
+        login_res = self.client.post("/login", data={
+            "username": u_name,
+            "password": u_pass
+        }, follow_redirects=True)
+        self.assertEqual(login_res.status_code, 200)
+        self.assertNotIn(b"Invalid credentials provided", login_res.data)
+        self.assertIn(u_name.encode("utf-8"), login_res.data)
+        self.assertIn(b"Sign Out", login_res.data)
+
+        # Check database was rehydrated with correct profile preferences
+        rehydrated_user = database.get_user_by_username(u_name)
+        self.assertIsNotNone(rehydrated_user)
+        self.assertEqual(rehydrated_user["dietary_preference"], "Vegan")
+        self.assertIn("milk", rehydrated_user["allergies"])
+
+        # 6. Verify History and Compare contain the previously scanned product
+        hist = self.client.get("/history")
+        self.assertEqual(hist.status_code, 200)
+        self.assertIn(b"Organic Chamomile Tea", hist.data)
+
+        comp = self.client.get("/compare")
+        self.assertEqual(comp.status_code, 200)
+        self.assertIn(b"Organic Chamomile Tea", comp.data)
+
 if __name__ == "__main__":
     unittest.main()

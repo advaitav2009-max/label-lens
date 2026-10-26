@@ -25,6 +25,7 @@ from flask import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from itsdangerous import URLSafeTimedSerializer
 
 import database
 from analyzer import analyze_food_label, extract_text_from_image
@@ -54,6 +55,64 @@ app.config["SESSION_COOKIE_PATH"] = "/"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=90)
+
+def get_vault_serializer():
+    return URLSafeTimedSerializer(app.secret_key, salt="label-lens-user-vault")
+
+def get_vault_accounts(req):
+    """
+    Retrieves the dictionary of known user accounts from the signed persistent cookie or form body.
+    """
+    token = req.cookies.get("label_lens_vault") or req.form.get("vault_token")
+    if not token:
+        return {}
+    try:
+        data = get_vault_serializer().loads(token, max_age=315360000)
+        if isinstance(data, dict):
+            if "username" in data:
+                return {data["username"].strip().lower(): data}
+            return data
+    except Exception:
+        pass
+    return {}
+
+def create_vault_token(accounts_dict):
+    return get_vault_serializer().dumps(accounts_dict)
+
+def update_vault_response(response, user_profile):
+    if not user_profile or not user_profile.get("username"):
+        return response
+    try:
+        accounts = get_vault_accounts(request)
+        key = user_profile["username"].strip().lower()
+        accounts[key] = {
+            "id": user_profile.get("id"),
+            "username": user_profile.get("username"),
+            "email": user_profile.get("email"),
+            "password_hash": user_profile.get("password_hash"),
+            "allergies": user_profile.get("allergies", []),
+            "custom_allergies": user_profile.get("custom_allergies", []),
+            "dietary_preference": user_profile.get("dietary_preference", "Non-Vegetarian"),
+            "avoid_items": user_profile.get("avoid_items", []),
+            "health_goals": user_profile.get("health_goals", []),
+            "custom_goals": user_profile.get("custom_goals", []),
+            "budget_target": user_profile.get("budget_target", 50.0),
+            "currency": user_profile.get("currency", "₹")
+        }
+        if len(accounts) > 5:
+            accounts = dict(list(accounts.items())[-5:])
+        token = create_vault_token(accounts)
+        response.set_cookie(
+            "label_lens_vault",
+            token,
+            max_age=315360000,
+            path="/",
+            httponly=True,
+            samesite="Lax"
+        )
+    except Exception:
+        pass
+    return response
 
 if IS_SERVERLESS:
     UPLOAD_FOLDER = "/tmp/uploads"
@@ -94,11 +153,22 @@ def load_logged_in_user():
         if user_id:
             user = database.get_user_by_id(user_id)
 
-        # In serverless environments, rehydrate user into the current container's SQLite if missing
+        # In serverless environments, check vault if session lacks profile
+        if user is None and not user_profile and user_id:
+            vault_accounts = get_vault_accounts(request)
+            for k, prof in vault_accounts.items():
+                if prof.get("id") == user_id:
+                    user_profile = prof
+                    session["user_profile"] = prof
+                    break
+
+        # Rehydrate user into the current container's SQLite if missing
         if user is None and user_profile:
             try:
                 database.restore_user_from_session(user_profile)
                 user = database.get_user_by_id(user_profile.get("id"))
+                if not user and user_profile.get("username"):
+                    user = database.get_user_by_username(user_profile.get("username"))
             except Exception as e:
                 print(f"Error restoring user from session: {e}")
                 user = None
@@ -150,13 +220,26 @@ def set_device_cookie(response):
             httponly=True,
             samesite="Lax"
         )
+    user_prof = session.get("user_profile")
+    if user_prof and user_prof.get("username"):
+        try:
+            update_vault_response(response, user_prof)
+        except Exception:
+            pass
     return response
 
 @app.context_processor
 def inject_user_and_samples():
+    vault_token = request.cookies.get("label_lens_vault", "")
+    if not vault_token and session.get("user_profile"):
+        try:
+            vault_token = create_vault_token({session["user_profile"]["username"].strip().lower(): session["user_profile"]})
+        except Exception:
+            vault_token = ""
     return {
         "current_user": g.user,
-        "samples": SAMPLE_PRODUCTS
+        "samples": SAMPLE_PRODUCTS,
+        "vault_token": vault_token
     }
 
 # -------------------------------------------------------------
@@ -232,7 +315,7 @@ def register():
                 s["user_id"] = user_id
             session["recent_scans"] = saved_recent_scans
         session["user_id"] = user_id
-        session["user_profile"] = {
+        user_profile = {
             "id": user_id,
             "username": username,
             "email": email,
@@ -246,9 +329,11 @@ def register():
             "budget_target": budget_target,
             "currency": currency
         }
+        session["user_profile"] = user_profile
         session.permanent = True
         flash(f"Welcome to Label Lens, {username}. Your preferences are saved.", "success")
-        return redirect(url_for("scan"))
+        resp = redirect(url_for("scan"))
+        return update_vault_response(resp, user_profile)
 
     return render_template("register.html")
 
@@ -261,6 +346,21 @@ def login():
         user = database.get_user_by_username(identifier)
         if not user:
             user = database.get_user_by_email(identifier.lower())
+
+        # If user is missing from current serverless container's SQLite DB, check the signed account vault
+        if not user:
+            vault_accounts = get_vault_accounts(request)
+            matched_profile = None
+            for k, prof in vault_accounts.items():
+                if (prof.get("username", "").strip().lower() == identifier.lower() or
+                    prof.get("email", "").strip().lower() == identifier.lower()):
+                    matched_profile = prof
+                    break
+            if matched_profile:
+                database.restore_user_from_session(matched_profile)
+                user = database.get_user_by_username(identifier)
+                if not user:
+                    user = database.get_user_by_email(identifier.lower())
 
         if user and check_password_hash(user["password_hash"], password):
             saved_device_id = session.get("device_id")
@@ -277,7 +377,7 @@ def login():
                     s["user_id"] = user["id"]
                 session["recent_scans"] = saved_recent_scans
             session["user_id"] = user["id"]
-            session["user_profile"] = {
+            user_profile = {
                 "id": user["id"],
                 "username": user["username"],
                 "email": user["email"],
@@ -291,9 +391,11 @@ def login():
                 "budget_target": user.get("budget_target", 50.0),
                 "currency": user.get("currency", "₹")
             }
+            session["user_profile"] = user_profile
             session.permanent = True
             flash(f"Authenticated as {user['username']}.", "success")
-            return redirect(url_for("scan"))
+            resp = redirect(url_for("scan"))
+            return update_vault_response(resp, user_profile)
         else:
             flash("Invalid credentials provided.", "danger")
 
@@ -360,7 +462,8 @@ def profile():
         }
         session.permanent = True
         flash("Preferences updated successfully.", "success")
-        return redirect(url_for("profile"))
+        resp = redirect(url_for("profile"))
+        return update_vault_response(resp, session["user_profile"])
 
     return render_template("profile.html")
 

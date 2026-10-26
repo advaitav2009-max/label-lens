@@ -93,6 +93,13 @@
   <script src="{{ url_for('static', filename='js/ocr.js') }}?v=2.2"></script>
   <script src="{{ url_for('static', filename='js/camera.js') }}?v=2.2"></script>
   <script src="{{ url_for('static', filename='js/main.js') }}?v=2.2"></script>
+  <script>
+    {% if vault_token %}
+    try {
+      localStorage.setItem("label_lens_vault", {{ vault_token|tojson }});
+    } catch(e) {}
+    {% endif %}
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

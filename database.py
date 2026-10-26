@@ -149,28 +149,30 @@ def create_user(username, email, password_hash, allergies=None, custom_allergies
     health_goals_json = json.dumps(health_goals or [])
     custom_goals_json = json.dumps(custom_goals or [])
 
+    user_id = int(time.time() * 1000) * 1000 + random.randint(100, 999)
     cursor.execute("""
-    INSERT INTO users (username, email, password_hash, allergies, dietary_preference, avoid_items, health_goals, budget_target, currency)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (username, email, password_hash, allergies_json, dietary_preference, avoid_items_json, health_goals_json, budget_target, currency))
-    user_id = cursor.lastrowid
+    INSERT INTO users (id, username, email, password_hash, allergies, dietary_preference, avoid_items, health_goals, budget_target, currency)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, username, email, password_hash, allergies_json, dietary_preference, avoid_items_json, health_goals_json, budget_target, currency))
     conn.commit()
     conn.close()
     return user_id
 
 def restore_user_from_session(user_profile):
     """
-    Restores or synchronizes an authenticated user from a signed session
+    Restores or synchronizes an authenticated user from a signed session or vault
     into the current SQLite database (essential for serverless lambda instances on Vercel).
     """
-    if not user_profile or "id" not in user_profile:
+    if not user_profile or not user_profile.get("username"):
         return None
+    user_id = user_profile.get("id") or int(time.time() * 1000) * 1000 + random.randint(100, 999)
+    user_profile["id"] = user_id
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE id = ? AND username = ?", (user_profile["id"], user_profile.get("username")))
+    cursor.execute("SELECT id FROM users WHERE id = ? OR username = ?", (user_id, user_profile.get("username")))
     if cursor.fetchone():
         conn.close()
-        return user_profile["id"]
+        return user_id
 
     allergies_json = json.dumps(user_profile.get("allergies", []))
     avoid_items_json = json.dumps(user_profile.get("avoid_items", []))
@@ -188,7 +190,7 @@ def restore_user_from_session(user_profile):
             avoid_items, health_goals, budget_target, currency
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            user_profile["id"],
+            user_id,
             user_profile.get("username", "user"),
             user_profile.get("email", "user@example.com"),
             user_profile.get("password_hash", "session_auth"),
@@ -204,7 +206,7 @@ def restore_user_from_session(user_profile):
         print(f"Error restoring user in database: {e}")
     finally:
         conn.close()
-    return user_profile["id"]
+    return user_id
 
 def update_user_profile(user_id, allergies, dietary_preference, avoid_items, health_goals,
                         budget_target=None, currency='₹', custom_allergies=None, custom_goals=None):
@@ -280,7 +282,7 @@ def claim_device_scans_for_user(user_id, device_id):
         return
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE scans SET user_id = ? WHERE device_id = ? AND user_id IS NULL", (user_id, device_id))
+    cursor.execute("UPDATE scans SET user_id = ? WHERE device_id = ?", (user_id, device_id))
     conn.commit()
     conn.close()
 
