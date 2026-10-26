@@ -18,6 +18,7 @@ import re
 import json
 import base64
 import uuid
+from datetime import timedelta
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, session, jsonify, g, send_from_directory
@@ -46,6 +47,14 @@ app = Flask(
 )
 app.secret_key = os.environ.get("SECRET_KEY", "label-lens-super-secure-key-2026")
 
+# Strict session cookie configuration for persistent authentication across navigations & Vercel rewrites
+app.config["APPLICATION_ROOT"] = "/"
+app.config["SESSION_COOKIE_NAME"] = "label_lens_session"
+app.config["SESSION_COOKIE_PATH"] = "/"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=90)
+
 if IS_SERVERLESS:
     UPLOAD_FOLDER = "/tmp/uploads"
 else:
@@ -64,6 +73,9 @@ with app.app_context():
 
 @app.before_request
 def load_logged_in_user():
+    # Keep session active
+    session.permanent = True
+
     # 1. Device identification (stored in cookie + session for anonymous device history)
     device_id = request.cookies.get("device_id") or session.get("device_id")
     if not device_id:
@@ -73,10 +85,45 @@ def load_logged_in_user():
 
     # 2. User profile session
     user_id = session.get("user_id")
-    if user_id is None:
+    user_profile = session.get("user_profile")
+
+    if user_id is None and not user_profile:
         g.user = None
     else:
-        g.user = database.get_user_by_id(user_id)
+        user = None
+        if user_id:
+            user = database.get_user_by_id(user_id)
+
+        # In serverless environments, rehydrate user into the current container's SQLite if missing
+        if user is None and user_profile:
+            try:
+                database.restore_user_from_session(user_profile)
+                user = database.get_user_by_id(user_profile.get("id"))
+            except Exception as e:
+                print(f"Error restoring user from session: {e}")
+                user = None
+
+        # Fallback profile dictionary if database is temporarily unavailable
+        if user is None and user_profile:
+            user = {
+                "id": user_profile.get("id"),
+                "username": user_profile.get("username", "User"),
+                "email": user_profile.get("email", ""),
+                "password_hash": user_profile.get("password_hash", ""),
+                "allergies": user_profile.get("allergies", []),
+                "custom_allergies": user_profile.get("custom_allergies", []),
+                "dietary_preference": user_profile.get("dietary_preference", "Non-Vegetarian"),
+                "avoid_items": user_profile.get("avoid_items", []),
+                "health_goals": user_profile.get("health_goals", []),
+                "custom_goals": user_profile.get("custom_goals", []),
+                "budget_target": user_profile.get("budget_target", 50.0),
+                "currency": user_profile.get("currency", "₹"),
+                "created_at": "Active"
+            }
+
+        g.user = user
+        if user and "id" in user:
+            session["user_id"] = user["id"]
 
 @app.after_request
 def set_device_cookie(response):
@@ -85,6 +132,7 @@ def set_device_cookie(response):
             "device_id",
             g.device_id,
             max_age=315360000, # 10 years persistent
+            path="/",
             httponly=True,
             samesite="Lax"
         )
@@ -156,8 +204,26 @@ def register():
             currency=currency
         )
 
+        saved_device_id = session.get("device_id")
         session.clear()
+        if saved_device_id:
+            session["device_id"] = saved_device_id
         session["user_id"] = user_id
+        session["user_profile"] = {
+            "id": user_id,
+            "username": username,
+            "email": email,
+            "password_hash": password_hash,
+            "allergies": allergies,
+            "custom_allergies": custom_allergies,
+            "dietary_preference": dietary_preference,
+            "avoid_items": avoid_items,
+            "health_goals": health_goals,
+            "custom_goals": custom_goals,
+            "budget_target": budget_target,
+            "currency": currency
+        }
+        session.permanent = True
         flash(f"Welcome to Label Lens, {username}. Your preferences are saved.", "success")
         return redirect(url_for("scan"))
 
@@ -174,8 +240,26 @@ def login():
             user = database.get_user_by_email(identifier.lower())
 
         if user and check_password_hash(user["password_hash"], password):
+            saved_device_id = session.get("device_id")
             session.clear()
+            if saved_device_id:
+                session["device_id"] = saved_device_id
             session["user_id"] = user["id"]
+            session["user_profile"] = {
+                "id": user["id"],
+                "username": user["username"],
+                "email": user["email"],
+                "password_hash": user["password_hash"],
+                "allergies": user.get("allergies", []),
+                "custom_allergies": user.get("custom_allergies", []),
+                "dietary_preference": user.get("dietary_preference", "Non-Vegetarian"),
+                "avoid_items": user.get("avoid_items", []),
+                "health_goals": user.get("health_goals", []),
+                "custom_goals": user.get("custom_goals", []),
+                "budget_target": user.get("budget_target", 50.0),
+                "currency": user.get("currency", "₹")
+            }
+            session.permanent = True
             flash(f"Authenticated as {user['username']}.", "success")
             return redirect(url_for("scan"))
         else:
@@ -185,7 +269,10 @@ def login():
 
 @app.route("/logout")
 def logout():
+    saved_device_id = session.get("device_id")
     session.clear()
+    if saved_device_id:
+        session["device_id"] = saved_device_id
     flash("Session terminated.", "info")
     return redirect(url_for("index"))
 
@@ -224,6 +311,22 @@ def profile():
             budget_target=budget_target,
             currency=currency
         )
+        updated_user = database.get_user_by_id(g.user["id"])
+        session["user_profile"] = {
+            "id": g.user["id"],
+            "username": updated_user["username"] if updated_user else g.user.get("username", "User"),
+            "email": updated_user["email"] if updated_user else g.user.get("email", ""),
+            "password_hash": updated_user["password_hash"] if updated_user else g.user.get("password_hash", ""),
+            "allergies": allergies,
+            "custom_allergies": custom_allergies,
+            "dietary_preference": dietary_preference,
+            "avoid_items": avoid_items,
+            "health_goals": health_goals,
+            "custom_goals": custom_goals,
+            "budget_target": budget_target,
+            "currency": currency
+        }
+        session.permanent = True
         flash("Preferences updated successfully.", "success")
         return redirect(url_for("profile"))
 

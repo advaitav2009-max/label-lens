@@ -156,6 +156,54 @@ def create_user(username, email, password_hash, allergies=None, custom_allergies
     conn.close()
     return user_id
 
+def restore_user_from_session(user_profile):
+    """
+    Restores or synchronizes an authenticated user from a signed session
+    into the current SQLite database (essential for serverless lambda instances on Vercel).
+    """
+    if not user_profile or "id" not in user_profile:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE id = ? AND username = ?", (user_profile["id"], user_profile.get("username")))
+    if cursor.fetchone():
+        conn.close()
+        return user_profile["id"]
+
+    allergies_json = json.dumps(user_profile.get("allergies", []))
+    avoid_items_json = json.dumps(user_profile.get("avoid_items", []))
+    health_goals_json = json.dumps(user_profile.get("health_goals", []))
+
+    try:
+        # Remove any existing conflicting records for this username/email
+        cursor.execute("DELETE FROM users WHERE username = ? OR email = ?", (
+            user_profile.get("username", "user"),
+            user_profile.get("email", "user@example.com")
+        ))
+        cursor.execute("""
+        INSERT OR REPLACE INTO users (
+            id, username, email, password_hash, allergies, dietary_preference,
+            avoid_items, health_goals, budget_target, currency
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_profile["id"],
+            user_profile.get("username", "user"),
+            user_profile.get("email", "user@example.com"),
+            user_profile.get("password_hash", "session_auth"),
+            allergies_json,
+            user_profile.get("dietary_preference", "Non-Vegetarian"),
+            avoid_items_json,
+            health_goals_json,
+            user_profile.get("budget_target", 50.0),
+            user_profile.get("currency", "₹")
+        ))
+        conn.commit()
+    except Exception as e:
+        print(f"Error restoring user in database: {e}")
+    finally:
+        conn.close()
+    return user_profile["id"]
+
 def update_user_profile(user_id, allergies, dietary_preference, avoid_items, health_goals,
                         budget_target=None, currency='₹', custom_allergies=None, custom_goals=None):
     conn = get_db()

@@ -441,5 +441,57 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertIn(b"Strongly Recommended (100% Pure Formulation)", resp.data)
         self.assertNotIn(b"minimal chemical processing", resp.data)
 
+    def test_session_persistence_and_serverless_rehydration(self):
+        # 1. Register a user via the web interface
+        unique_name = f"persist_{uuid.uuid4().hex[:6]}"
+        reg_resp = self.client.post("/register", data={
+            "username": unique_name,
+            "email": f"{unique_name}@example.com",
+            "password": "Password123!",
+            "dietary_preference": "Vegetarian",
+            "allergies": ["peanuts", "milk"],
+            "custom_allergies": "hazelnut",
+            "health_goals": ["reduced_sugar"],
+            "custom_goals": "high protein",
+            "avoid_items": "palm oil",
+            "budget_target": "75.0",
+            "currency": "₹"
+        }, follow_redirects=True)
+        self.assertEqual(reg_resp.status_code, 200)
+
+        # 2. Verify user is logged in and session cookie is scoped to '/'
+        cookie = self.client.get_cookie("label_lens_session")
+        self.assertIsNotNone(cookie)
+        self.assertEqual(cookie.path, "/")
+
+        # 3. Navigate across different pages: /scan, /history, /compare, /guide, /profile
+        pages = ["/scan", "/history", "/compare", "/guide", "/profile"]
+        for p in pages:
+            res = self.client.get(p)
+            self.assertEqual(res.status_code, 200)
+            # The navigation bar must show the user's name and 'Sign Out', NOT 'Sign In'
+            self.assertIn(unique_name.encode("utf-8"), res.data)
+            self.assertIn(b"Sign Out", res.data)
+            self.assertNotIn(b"Sign In", res.data)
+
+        # 4. Simulate a new serverless container (ephemeral SQLite wiped / user missing from DB)
+        conn = database.get_db()
+        conn.execute("DELETE FROM users WHERE username = ?", (unique_name,))
+        conn.commit()
+        # Verify the user is gone from this database
+        self.assertIsNone(database.get_user_by_username(unique_name))
+        conn.close()
+
+        # 5. Accessing /scan or /history on the new container must automatically rehydrate the user
+        scan_page = self.client.get("/scan")
+        self.assertEqual(scan_page.status_code, 200)
+        self.assertIn(unique_name.encode("utf-8"), scan_page.data)
+        self.assertIn(b"Sign Out", scan_page.data)
+
+        # The user was re-inserted into the SQLite DB from session profile
+        rehydrated = database.get_user_by_username(unique_name)
+        self.assertIsNotNone(rehydrated)
+        self.assertEqual(rehydrated["dietary_preference"], "Vegetarian")
+
 if __name__ == "__main__":
     unittest.main()
