@@ -347,17 +347,27 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertTrue(res_random["is_blurry"])
         self.assertFalse(res_random["is_valid_food_label"])
 
-        # 4. Web view rendering test for blurry advisory
+        # 4. User sample: 'qaff' extracted from blurry food photo
+        res_qaff = analyze_food_label("qaff")
+        self.assertTrue(res_qaff["is_blurry"])
+        self.assertFalse(res_qaff["is_valid_food_label"])
+        self.assertEqual(res_qaff["verdict"], "Blurry / Illegible Image - Retake Photo")
+        self.assertEqual(res_qaff["star_rating"], 1.0)
+        self.assertEqual(res_qaff["verdict_badge"], "caution")
+        self.assertIn("retake the photo", res_qaff["eat_recommendation"].lower())
+
+        # 5. Web view rendering test for blurry advisory
         resp = self.client.post("/scan", data={
-            "product_name": "Blurry Capture",
+            "product_name": "Blurry Food Packet",
             "category": "General Packaged Food",
             "packet_price": "",
             "servings": "",
-            "raw_text": smeared_text
+            "raw_text": "qaff"
         }, follow_redirects=True)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn(b"Blurry / Illegible Photo Advisory", resp.data)
+        self.assertIn(b"Photo Too Blurry to Read Ingredients", resp.data)
         self.assertIn(b"Retake Photo", resp.data)
+        self.assertIn(b"Not evaluated: Image too blurry to resolve ingredients", resp.data)
 
     def test_makeup_and_expanded_cosmetics_detection(self):
         # 1. Foundation makeup

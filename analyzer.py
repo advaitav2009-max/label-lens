@@ -556,9 +556,13 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
         vowel_words = [w for w in words if re.search(r"[aeiouy]", w) and len(w) >= 3]
         vowel_ratio = len(vowel_words) / max(1, len(words))
 
-        # Flag as blurry if text is short, fragmented, or has low vowel word ratio
-        if not has_doc_words and (vowel_ratio < 0.40 or len(vowel_words) < 3 or len(cleaned_alpha) < 20):
-            is_blurry = True
+        if not has_doc_words:
+            # If total_signals == 0 and there are no document keywords:
+            # Short text (< 55 chars), few words (< 6 words), or low vowel ratio indicates blurry / partial OCR fragments (e.g. 'qaff')
+            if len(clean_text) < 55 or len(words) < 6 or vowel_ratio < 0.50:
+                is_blurry = True
+            else:
+                is_non_food = True
         else:
             is_non_food = True
 
