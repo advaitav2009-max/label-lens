@@ -314,19 +314,22 @@
       </div>
       {% if analysis.detected_fats %}
         <p style="font-size: 0.82rem; color: var(--caution-text); font-weight: 600; margin-bottom: 0.75rem;">
-          {{ analysis.detected_fats|length }} industrial lipid marker(s):
+          {{ analysis.detected_fats|length }} industrial lipid marker(s) identified:
         </p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem;">
           {% for fat in analysis.detected_fats %}
             <span class="badge badge-caution">{{ fat }}</span>
           {% endfor %}
         </div>
+        <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">
+          Refined lipid formulation identified: Contains {{ analysis.detected_fats|join(', ') }}. Concentrated in saturated fatty acids.
+        </p>
       {% else %}
         <div class="breakdown-item safe">
           {% if analysis.is_cosmetic %}
             Not evaluated: Inedible cosmetic formulation.
           {% else %}
-            Free from palm olein and hydrogenated vegetable fats.
+            No industrial palm olein or hydrogenated vegetable fats detected.
           {% endif %}
         </div>
       {% endif %}

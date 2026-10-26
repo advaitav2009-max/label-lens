@@ -254,5 +254,75 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertIn(b"Skincare &amp; Cosmetic Chemicals Detected", resp.data)
         self.assertIn(b"DO NOT INGEST / DO NOT EAT", resp.data)
 
+    def test_palm_oil_and_palmolein_detection(self):
+        # 1. Exact raw transcription from user containing Pamolein and Allergen Contains at end
+        user_raw = (
+            "Potatoes (41%), Edible Vegetable OF ITED, (Pamolein, Cotton Seed, Rice Bran), Sugar Powe. 7, "
+            "Rains (8.0%) Cashew Nuts Fox Ames 0 DIA Rice Flakes (2.0%), Sesame seeds, odised Salt "
+            "Curry Leaves (1.23), Black Pepper Poder, Cumin M.COM Acidity Regulator (NS330. "
+            "y Allergen Information: Contains Nut ___ - a LA. READY-TO-EAT SAVOURIES (PROPRIETARY FOOD) "
+            "STORE IN A COOL 8 DRY PLACE, ONCE OPENER STORE \u00a5 1 A TERIAL IN AN AIR TIGHT CONTAINER"
+        )
+        res_user = analyze_food_label(user_raw)
+        self.assertIn("Palmolein (Palm Olein)", res_user["detected_fats"])
+        self.assertIn("Cottonseed Oil", res_user["detected_fats"])
+        self.assertIn("Rice Bran Oil", res_user["detected_fats"])
+        self.assertEqual(res_user["verdict"], "Consume in Moderation")
+        self.assertEqual(res_user["verdict_badge"], "caution")
+        self.assertLessEqual(res_user["star_rating"], 3.0)
+        self.assertIn("Palmolein", res_user["eat_recommendation"])
+        self.assertTrue(any("Palmolein" in r for r in res_user["reasons"]))
+
+        # 2. Standalone Palm inside Edible Vegetable Oil parentheses
+        res_palm_paren = analyze_food_label("Ingredients: Potatoes, Edible Vegetable Oil (Palm), Iodised Salt.")
+        self.assertIn("Palm Oil", res_palm_paren["detected_fats"])
+        self.assertEqual(res_palm_paren["verdict"], "Consume in Moderation")
+        self.assertIn("Palm Oil", res_palm_paren["eat_recommendation"])
+        self.assertLessEqual(res_palm_paren["star_rating"], 3.0)
+
+        # 3. Palm with hyphen / concatenated
+        res_hyphen = analyze_food_label("Ingredients: Wheat flour, sugar, palm-oil, salt.")
+        self.assertIn("Palm Oil", res_hyphen["detected_fats"])
+        self.assertIn("Palm Oil", res_hyphen["eat_recommendation"])
+
+        res_concat = analyze_food_label("Ingredients: Wheat flour, sugar, palmoil, palm fat, salt.")
+        self.assertIn("Palm Oil", res_concat["detected_fats"])
+
+        # 4. False positive checks: palm sugar and hearts of palm should NOT trigger palm oil
+        res_sugar = analyze_food_label("Ingredients: Organic rolled oats, palm sugar, coconut milk.")
+        self.assertNotIn("Palm Oil", res_sugar["detected_fats"])
+        self.assertNotIn("Palmolein (Palm Olein)", res_sugar["detected_fats"])
+
+        res_hearts = analyze_food_label("Ingredients: Hearts of palm, water, salt, citric acid.")
+        self.assertNotIn("Palm Oil", res_hearts["detected_fats"])
+
+        # 5. Avoid list integration for palm oil
+        user_avoid_profile = {
+            "allergies": [],
+            "custom_allergies": [],
+            "dietary_preference": "Non-Vegetarian",
+            "avoid_items": ["palm oil"],
+            "health_goals": [],
+            "custom_goals": [],
+            "budget_target": None
+        }
+        res_avoid = analyze_food_label(user_raw, user_profile=user_avoid_profile)
+        self.assertTrue(len(res_avoid["avoid_conflicts"]) > 0)
+        self.assertEqual(res_avoid["verdict"], "Contains Items on Your Avoid List")
+        self.assertEqual(res_avoid["verdict_badge"], "warning")
+
+        # 6. Web form submission verification
+        resp = self.client.post("/scan", data={
+            "product_name": "Haldiram Savouries",
+            "category": "Chips & Savory Snacks",
+            "packet_price": "40",
+            "servings": "2",
+            "raw_text": user_raw
+        }, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Palmolein (Palm Olein)", resp.data)
+        self.assertNotIn(b"Free from palm olein and hydrogenated vegetable fats", resp.data)
+        self.assertIn(b"Notice: Contains Palmolein", resp.data)
+
 if __name__ == "__main__":
     unittest.main()

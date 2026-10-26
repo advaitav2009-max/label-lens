@@ -208,10 +208,24 @@ class OCREngine {
     clean = clean.replace(/\b[1l|I]ns\b/gi, "INS");
     clean = clean.replace(/\b[1l|I]ngredients?\b/gi, "Ingredients");
     clean = clean.replace(/INS\s*([0-9]{3,4})/gi, "INS $1");
+    clean = clean.replace(/\bpa[1l|i]m[\s\-_]*o[il1]+s?\b/gi, "palm oil");
+    clean = clean.replace(/\bpa[1l|i]m[\s\-_]*o[li1]+e[il1]+ns?\b/gi, "palmolein");
+    clean = clean.replace(/\bpam[\s\-_]*o[li1]+e[il1]+ns?\b/gi, "palmolein");
+    clean = clean.replace(/\bpamolein\b/gi, "palmolein");
+    clean = clean.replace(/\bpamolin\b/gi, "palmolein");
+    clean = clean.replace(/\bpalmolin\b/gi, "palmolein");
+    clean = clean.replace(/\bpalmolene\b/gi, "palmolein");
+    clean = clean.replace(/\bpalmoil\b/gi, "palm oil");
+    clean = clean.replace(/\bpalm[\-_]oil\b/gi, "palm oil");
+    clean = clean.replace(/\bpalmfat\b/gi, "palm fat");
+    clean = clean.replace(/\bpalm[\-_]fat\b/gi, "palm fat");
+    clean = clean.replace(/\b[1l|]odised\b/gi, "iodised");
+    clean = clean.replace(/\b[1l|]odized\b/gi, "iodized");
 
-    // 3. Isolate ingredients section safely if marked, without premature cutoff
+    // 3. Isolate ingredients section safely only if an explicit "INGREDIENTS" keyword is present
+    // Avoid matching 'CONTAINS' (which usually declares allergens at the bottom and would cut off earlier ingredients)
     const match = clean.match(
-      /(?:INGREDIENTS|INGREDIENT|CONTAINS)\s*[:\-]?\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)/i
+      /\b(?:INGREDIENTS|INGREDIENT)\b\s*[:\-]?\s*(.*?)(?:NUTRITION(?:AL)?\s+(?:INFO|FACTS|VALUES|TABLE)|TYPICAL VALUES PER|BEST BEFORE DATE|$)/i
     );
     if (match && match[1] && match[1].trim().length > 15) {
       return match[1].trim();

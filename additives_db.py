@@ -535,13 +535,14 @@ SUGAR_ALIASES = [
 # Ultra-processed & Unhealthy Oils / Fats
 UNHEALTHY_FATS = [
     "palm oil", "palmolein", "pamolein", "palm olein", "palmolin", "pamolin",
-    "refined palm oil", "fractionated palm kernel oil", "palm kernel oil", "palm kernel",
+    "palm", "palmoil", "palm-oil", "palm fat", "palm stearin", "palm superolein",
+    "palm kernel oil", "palm kernel", "fractionated palm kernel oil", "refined palm oil",
     "cottonseed oil", "refined cottonseed oil", "cotton seed oil", "cottonseed", "cotton seed",
     "hydrogenated vegetable oil", "partially hydrogenated vegetable oil", "hydrogenated fat",
     "hydrogenated vegetable fat", "interesterified vegetable fat", "vanaspati", "margarine",
     "shortening", "edible vegetable oil", "refined vegetable oil", "vegetable oil",
     "edible vegetable fat", "vegetable fat", "trans fat", "trans-fatty acids",
-    "rice bran oil", "ricebran oil"
+    "rice bran oil", "ricebran oil", "rice bran"
 ]
 
 # Major Common Food Allergens
