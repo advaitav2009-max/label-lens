@@ -324,5 +324,86 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertNotIn(b"Free from palm olein and hydrogenated vegetable fats", resp.data)
         self.assertIn(b"Notice: Contains Palmolein", resp.data)
 
+    def test_blurry_and_illegible_photo_detection(self):
+        # 1. OCR smear artifacts from severely blurry image
+        smeared_text = ".. , _ - | o e a i"
+        res_smeared = analyze_food_label(smeared_text)
+        self.assertTrue(res_smeared["is_blurry"])
+        self.assertFalse(res_smeared["is_valid_food_label"])
+        self.assertEqual(res_smeared["verdict"], "Blurry / Illegible Image - Retake Photo")
+        self.assertEqual(res_smeared["star_rating"], 1.0)
+        self.assertEqual(res_smeared["verdict_badge"], "caution")
+        self.assertIn("retake the photo", res_smeared["eat_recommendation"].lower())
+
+        # 2. Fragmented gibberish characters
+        gibberish_text = "x j k . ~ - q w e r t"
+        res_gibberish = analyze_food_label(gibberish_text)
+        self.assertTrue(res_gibberish["is_blurry"])
+        self.assertEqual(res_gibberish["verdict"], "Blurry / Illegible Image - Retake Photo")
+
+        # 3. Short random keystrokes
+        short_random = "asdf qwer zxcv 1234"
+        res_random = analyze_food_label(short_random)
+        self.assertTrue(res_random["is_blurry"])
+        self.assertFalse(res_random["is_valid_food_label"])
+
+        # 4. Web view rendering test for blurry advisory
+        resp = self.client.post("/scan", data={
+            "product_name": "Blurry Capture",
+            "category": "General Packaged Food",
+            "packet_price": "",
+            "servings": "",
+            "raw_text": smeared_text
+        }, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Blurry / Illegible Photo Advisory", resp.data)
+        self.assertIn(b"Retake Photo", resp.data)
+
+    def test_makeup_and_expanded_cosmetics_detection(self):
+        # 1. Foundation makeup
+        foundation_text = "Aqua, Cyclopentasiloxane, Dimethicone, Isododecane, Mica, Phenoxyethanol, Ethylhexylglycerin, Titanium Dioxide, Iron Oxides."
+        res_f = analyze_food_label(foundation_text)
+        self.assertTrue(res_f["is_cosmetic"])
+        self.assertEqual(res_f["score"], 0)
+        self.assertEqual(res_f["verdict_badge"], "danger")
+        self.assertIn("Non-Food / Inedible", res_f["verdict"])
+        self.assertIn("DO NOT EAT / INEDIBLE", res_f["eat_recommendation"])
+
+        # 2. Waterproof Mascara
+        mascara_text = "Waterproof Mascara with Beeswax and Iron Oxides, Isododecane, Disteardimonium Hectorite, Propylene Carbonate."
+        res_m = analyze_food_label(mascara_text)
+        self.assertTrue(res_m["is_cosmetic"])
+        self.assertEqual(res_m["verdict_badge"], "danger")
+
+        # 3. Lipstick
+        lipstick_text = "Matte Lipstick with Dimethicone, Polyethylene, Synthetic Wax, CI 77491, CI 15850, BHT."
+        res_l = analyze_food_label(lipstick_text)
+        self.assertTrue(res_l["is_cosmetic"])
+
+        # 4. Sunscreen SPF
+        sunscreen_text = "Ultra Sheer Sunscreen SPF 50 with Avobenzone 3%, Homosalate 10%, Octisalate 5%, Oxybenzone 6%, For external use only."
+        res_s = analyze_food_label(sunscreen_text)
+        self.assertTrue(res_s["is_cosmetic"])
+
+    def test_non_food_general_documents(self):
+        # 1. Invoice text
+        invoice_text = "INVOICE #10294 Date: 2026-10-15 Customer: ABC Corp Subtotal: $450.00 Total Due: $486.00 Payment method: Credit Card"
+        res_inv = analyze_food_label(invoice_text)
+        self.assertTrue(res_inv["is_non_food"])
+        self.assertFalse(res_inv["is_valid_food_label"])
+        self.assertEqual(res_inv["verdict"], "Non-Food Content / Unrelated Text")
+
+        # 2. Python technical instruction
+        tech_text = "Install Python 3.11 and configure virtual environment. Run pip install flask. Then start the application with python app.py on port 5000."
+        res_tech = analyze_food_label(tech_text)
+        self.assertTrue(res_tech["is_non_food"])
+        self.assertEqual(res_tech["verdict"], "Non-Food Content / Unrelated Text")
+
+        # 3. Quantum physics article
+        physics_text = "Quantum mechanics is a fundamental theory in physics that provides a description of the physical properties of nature at atomic scale."
+        res_phy = analyze_food_label(physics_text)
+        self.assertTrue(res_phy["is_non_food"])
+        self.assertEqual(res_phy["verdict"], "Non-Food Content / Unrelated Text")
+
 if __name__ == "__main__":
     unittest.main()

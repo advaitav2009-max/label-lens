@@ -55,11 +55,17 @@ class OCREngine {
         // Highly compressed lightweight JPEG for Vercel payload (<90KB)
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
 
+        // Fast Laplacian variance blur assessment on downscaled canvas
+        const blurScore = OCREngine.calculateBlurScore(canvas);
+        const isVeryBlurry = blurScore < 20;
+
         resolve({
           compressedDataUrl,
           ocrDataUrl: compressedDataUrl,
           width,
-          height
+          height,
+          blurScore,
+          isVeryBlurry
         });
       };
 
@@ -105,6 +111,60 @@ class OCREngine {
       img.onerror = reject;
       img.src = dataUrl;
     });
+  }
+
+  /**
+   * Fast Laplacian variance blur estimator on a downscaled canvas (320x240 max).
+   * Returns a score: < 20 indicates severe blur or featureless smearing.
+   * Typical focused text with edges yields > 80.
+   */
+  static calculateBlurScore(canvas) {
+    try {
+      const w = Math.min(canvas.width, 320);
+      const h = Math.min(canvas.height, 240);
+      const sc = document.createElement("canvas");
+      sc.width = w;
+      sc.height = h;
+      const sctx = sc.getContext("2d", { willReadFrequently: true }) || sc.getContext("2d");
+      sctx.drawImage(canvas, 0, 0, w, h);
+      const imgData = sctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+
+      // Convert to grayscale
+      const gray = new Float32Array(w * h);
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        gray[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      }
+
+      // Sample Laplacian kernel: [0, 1, 0, 1, -4, 1, 0, 1, 0] with stride 2 for efficiency
+      let sum = 0;
+      let sumSq = 0;
+      let count = 0;
+
+      for (let y = 1; y < h - 1; y += 2) {
+        const row = y * w;
+        const rowAbove = (y - 1) * w;
+        const rowBelow = (y + 1) * w;
+        for (let x = 1; x < w - 1; x += 2) {
+          const lap =
+            gray[rowAbove + x] +
+            gray[rowBelow + x] +
+            gray[row + x - 1] +
+            gray[row + x + 1] -
+            4 * gray[row + x];
+          sum += lap;
+          sumSq += lap * lap;
+          count++;
+        }
+      }
+
+      if (count === 0) return 100;
+      const mean = sum / count;
+      const variance = sumSq / count - mean * mean;
+      return Math.round(variance);
+    } catch (e) {
+      return 100; // fail-safe: assume clear if canvas read is blocked
+    }
   }
 
   async recognize(imageSource, isAlreadyPreprocessed = false, replaceText = true) {

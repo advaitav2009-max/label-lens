@@ -104,6 +104,18 @@
         <div style="font-size: 0.76rem; color: var(--text-dim); margin-top: 0.45rem;">
           Tip: If the text is sideways, click "Rotate 90 deg" so words read horizontally for accurate character recognition.
         </div>
+
+        <!-- Blurry Image Warning (Only shown if severely out-of-focus, dismissible) -->
+        <div id="blur-warning-box" style="display: none; margin-top: 0.75rem; background-color: var(--caution-bg); border: 1px solid var(--caution-border); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; color: var(--caution-text); font-size: 0.82rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span>
+              <strong>Photo appears blurry:</strong> Fine print looks out of focus or smeared. For best character accuracy, hold camera steady and tap <em>Retake</em>.
+            </span>
+            <button type="button" id="dismiss-blur-btn" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.55rem; flex-shrink: 0;">
+              Keep Anyway
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- OCR Progress Bar -->
@@ -257,6 +269,17 @@
         document.getElementById("active-preview-box").style.display = "none";
         document.getElementById("active-preview-img").src = "";
         document.getElementById("camera-data-container").innerHTML = "";
+        const blurBox = document.getElementById("blur-warning-box");
+        if (blurBox) blurBox.style.display = "none";
+      });
+    }
+
+    // Dismiss blur warning button (user explicitly wants to proceed without repeated prompts)
+    const dismissBlurBtn = document.getElementById("dismiss-blur-btn");
+    if (dismissBlurBtn) {
+      dismissBlurBtn.addEventListener("click", () => {
+        const blurBox = document.getElementById("blur-warning-box");
+        if (blurBox) blurBox.style.display = "none";
       });
     }
 
@@ -298,12 +321,17 @@
       const prep = await OCREngine.preprocess(source, 1400, 0.78);
       currentActiveDataUrl = prep.compressedDataUrl;
 
-      // 2. Display preview box
+      // 2. Display preview box and check blur advisory
       const previewBox = document.getElementById("active-preview-box");
       const previewImg = document.getElementById("active-preview-img");
+      const blurBox = document.getElementById("blur-warning-box");
+
       if (previewBox && previewImg) {
         previewImg.src = prep.compressedDataUrl;
         previewBox.style.display = "block";
+        if (blurBox) {
+          blurBox.style.display = prep.isVeryBlurry ? "block" : "none";
+        }
         try {
           previewBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } catch (e) {}

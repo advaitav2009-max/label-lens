@@ -91,13 +91,25 @@
         This formulation is NOT edible food. Even if labeled or filed as a food item, cosmetic chemical emulsions are harmful to oral health and must not be consumed.
       </p>
     </div>
+  {% elif analysis.is_blurry %}
+    <div class="card" style="border-left: 4px solid var(--caution-text); margin-bottom: 1.75rem; background-color: var(--caution-bg); border-color: var(--caution-border);">
+      <h3 style="font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--caution-text); margin-bottom: 0.35rem;">
+        Blurry / Illegible Photo Advisory
+      </h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.5rem;">
+        The captured photo was too blurry, smeared, or out of focus to clearly recognize ingredient clauses. To avoid incorrect assumptions, please click <strong>Edit Product Details</strong> above or re-scan with the camera held steady and the text in clear focus.
+      </p>
+      <div style="font-size: 0.82rem; color: var(--text-dim);">
+        Tip: Good lighting and holding your camera 10 to 15 cm directly above the ingredients panel provides the sharpest text extraction.
+      </div>
+    </div>
   {% elif analysis.non_food_warning %}
     <div class="card" style="border-left: 4px solid var(--caution-text); margin-bottom: 1.75rem; background-color: var(--caution-bg); border-color: var(--caution-border);">
       <h3 style="font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--caution-text); margin-bottom: 0.35rem;">
         Non-Food Text Detected
       </h3>
       <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
-        The extracted typography does not appear to contain recognizable food ingredients, additives, or packaging clauses. If you accidentally scanned a document or non-food surface, please re-scan or click <strong>Edit Product Details</strong> above to correct the ingredient list.
+        The extracted typography describes non-food content or an unrelated document. If you accidentally scanned a document or non-food surface, please re-scan or click <strong>Edit Product Details</strong> above to provide the food ingredient list.
       </p>
     </div>
   {% endif %}
@@ -109,6 +121,10 @@
         <span class="verdict-badge-large">
           {% if analysis.is_cosmetic %}
             Inedible / Non-Food
+          {% elif analysis.is_blurry %}
+            Retake Photo
+          {% elif analysis.is_non_food %}
+            Non-Food Document
           {% elif scan.verdict_badge == 'safe' %}
             Recommended Formulation
           {% elif scan.verdict_badge == 'caution' %}

@@ -38,42 +38,69 @@ COMMON_FOOD_INDICATORS = [
     "fssai", "mrp"
 ]
 
-# Dedicated Skincare, Cosmetic & Non-Food Chemical Indicators
+# Dedicated Skincare, Makeup, Cosmetic & Non-Food Chemical Indicators
 COSMETIC_NON_FOOD_INDICATORS = [
     # Silicones & Synthetic Polymers
     "dimethicone", "cyclopentasiloxane", "cyclomethicone", "amodimethicone", "dimethiconol",
     "phenyl trimethicone", "carbomer", "acrylates copolymer", "polyacrylamide", "pvp",
-    "polyquaternium", "silica dimethyl silylate", "trimethylsiloxysilicate",
+    "polyquaternium", "silica dimethyl silylate", "trimethylsiloxysilicate", "peg-10 dimethicone",
+    "dimethicone crosspolymer", "disteardimonium hectorite",
+
     # Cosmetic Preservatives & Biocides (Strictly Inedible)
     "phenoxyethanol", "methylparaben", "propylparaben", "ethylparaben", "butylparaben",
     "paraben", "parabens", "ethylhexylglycerin", "chlorphenesin", "dmdm hydantoin",
     "imidazolidinyl urea", "diazolidinyl urea", "methylisothiazolinone",
     "methylchloroisothiazolinone", "benzyl alcohol", "dehydroacetic acid",
+
     # Surfactants & Foaming Agents
     "sodium laureth sulfate", "sodium lauryl sulfate", "sles", "sls",
     "cocamidopropyl betaine", "disodium laureth sulfosuccinate", "sodium cocoyl glycinate",
     "sodium lauroyl sarcosinate", "ammonium lauryl sulfate", "decyl glucoside",
+
     # Cosmetic Emulsifiers & Fatty Alcohols
     "cetearyl alcohol", "cetyl alcohol", "stearyl alcohol", "behenyl alcohol",
     "ceteareth-20", "ceteareth", "peg-100 stearate", "peg-40", "peg-7",
     "polysorbate 20", "polysorbate 60", "polysorbate 80", "triethanolamine",
+
     # Active Skincare Chemicals
     "niacinamide", "salicylic acid", "glycolic acid", "hyaluronic acid", "sodium hyaluronate",
     "retinol", "retinyl palmitate", "kojic acid", "benzoyl peroxide", "alpha arbutin",
     "panthenol", "allantoin", "ceramide",
-    # Sunscreen Actives
+
+    # Sunscreen Actives & UV Filters
     "avobenzone", "octinoxate", "oxybenzone", "homosalate", "octocrylene", "octisalate",
     "zinc oxide", "titanium dioxide",
+
+    # Makeup Minerals, Synthetic Pigments & Solvents
+    "isododecane", "mica", "synthetic fluorphlogopite", "bismuth oxychloride",
+    "ci 77891", "ci 77491", "ci 77492", "ci 77499", "ci 15850", "ci 45410", "ci 19140", "ci 42090",
+    "ultramarines", "iron oxides",
+
     # Chelators, Fragrances & Mineral Petrochemicals
     "disodium edta", "tetrasodium edta", "edta", "bht", "parfum", "fragrance",
     "mineral oil", "paraffinum liquidum", "petrolatum", "petroleum jelly",
     "isopropyl myristate", "caprylic/capric triglyceride", "octyldodecanol",
-    # External Application & Packaging Clues
+
+    # External Application, Product Types & Packaging Clues
     "for external use only", "external use only", "avoid contact with eyes",
     "dermatologically tested", "dermatologist tested", "apply on face", "apply to face",
-    "apply on skin", "massage gently", "rinse thoroughly", "body wash", "face wash",
-    "body lotion", "moisturizer", "moisturiser", "cleanser", "sunscreen", "shampoo",
-    "conditioner", "sunblock", "serum", "toner", "lip balm", "skincare", "skin care", "cosmetic"
+    "apply on skin", "massage gently", "rinse thoroughly", "ophthalmologist tested",
+    "non-comedogenic", "hypoallergenic", "shake well before application",
+    "body wash", "face wash", "body lotion", "moisturizer", "moisturiser", "cleanser",
+    "sunscreen", "shampoo", "conditioner", "sunblock", "serum", "toner", "lip balm",
+    "skincare", "skin care", "cosmetic", "foundation", "mascara", "eyeliner", "lipstick",
+    "lip gloss", "concealer", "blush", "bronzer", "highlighter", "eyeshadow",
+    "setting spray", "setting powder", "nail polish", "micellar water",
+    "spf 15", "spf 30", "spf 50"
+]
+
+COMMON_NON_FOOD_WORDS = [
+    "invoice", "customer", "subtotal", "payment", "receipt", "account", "order",
+    "quantum", "physics", "mechanics", "theory", "software", "python", "programming",
+    "council", "government", "meeting", "infrastructure", "traffic", "election",
+    "chapter", "novel", "author", "published", "copyright", "warranty", "manual",
+    "installation", "dimensions", "voltage", "circuit", "battery", "device", "screen",
+    "hardware", "keyboard", "display", "processor", "memory", "storage"
 ]
 
 # Optional pytesseract backend support
@@ -496,21 +523,44 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
     is_cosmetic = len(detected_cosmetics) >= 1
 
     food_word_count = sum(1 for w in COMMON_FOOD_INDICATORS if re.search(r"\b" + re.escape(w) + r"\b", lower_text))
-    total_signals = len(detected_additives) + len(detected_sugars) + len(detected_fats) + len(detected_allergens) + len(detected_beneficial) + food_word_count
+    total_signals = (
+        len(detected_additives) +
+        len(detected_sugars) +
+        len(detected_fats) +
+        len(detected_allergens) +
+        len(detected_beneficial) +
+        food_word_count
+    )
+
+    cleaned_alpha = re.sub(r"[^a-zA-Z]", "", clean_text)
+    words = [w.lower() for w in re.split(r"[^a-zA-Z0-9]+", clean_text) if len(w) > 0]
 
     is_valid_food_label = True
     non_food_warning = False
+    is_blurry = False
+    is_non_food = False
 
     if is_cosmetic:
         is_valid_food_label = False
         non_food_warning = True
-    elif len(clean_text) < 10:
+    elif len(cleaned_alpha) < 8:
+        # Extremely sparse or smeared typography
         is_valid_food_label = False
         non_food_warning = True
-    elif total_signals == 0 and len(clean_text) > 30:
-        # Long text without any food terms, additives, allergens, or ingredients
+        is_blurry = True
+    elif total_signals == 0:
         is_valid_food_label = False
         non_food_warning = True
+
+        has_doc_words = any(w in COMMON_NON_FOOD_WORDS for w in words)
+        vowel_words = [w for w in words if re.search(r"[aeiouy]", w) and len(w) >= 3]
+        vowel_ratio = len(vowel_words) / max(1, len(words))
+
+        # Flag as blurry if text is short, fragmented, or has low vowel word ratio
+        if not has_doc_words and (vowel_ratio < 0.40 or len(vowel_words) < 3 or len(cleaned_alpha) < 20):
+            is_blurry = True
+        else:
+            is_non_food = True
 
     # 10. Calculate Budget & Serving Value (Optional Handling)
     price = None
@@ -581,12 +631,23 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
             "These synthetic chemicals are non-food cosmetic ingredients strictly intended for external application.",
             "Do not ingest. If you were attempting to evaluate a food item, please verify that you did not photograph a cosmetic, lotion, or cleanser bottle."
         ]
-    elif not is_valid_food_label:
+    elif is_blurry:
+        score = 15
+        star_rating = 1.0
+        verdict = "Blurry / Illegible Image - Retake Photo"
+        verdict_badge = "caution"
+        eat_recommendation = "Notice: The captured photo was too blurry, smeared, or out of focus for reliable character recognition. Please retake the photo with the camera held steady and the ingredients text clearly focused."
+        reasons = [
+            "Extracted typography is too blurry or fragmented to extract recognizable food ingredients.",
+            "Please ensure packaging is well illuminated and lens is held steady 10 to 15 cm directly above the text.",
+            "Avoid moving the camera while snapping; tap Restart Camera or Retake / Clear to take a fresh photo."
+        ]
+    elif is_non_food or not is_valid_food_label:
         score = 20
         star_rating = 1.0
-        verdict = "Non-Food Content / Unrecognized Label"
+        verdict = "Non-Food Content / Unrelated Text"
         verdict_badge = "caution"
-        eat_recommendation = "Notice: The scanned text does not appear to contain food packaging declarations or ingredient clauses. Please ensure your camera is positioned over the ingredient list or nutritional facts panel."
+        eat_recommendation = "Notice: The scanned text describes non-food content (e.g. general document, invoice, electronics, or unrelated literature). LabelLens requires a food packaging ingredient list or nutritional facts panel."
         reasons = [
             "Extracted content lacks recognizable food ingredients, additives, or nutritional declarations.",
             "Verify that packaging text was clearly illuminated and within camera bounds."
@@ -725,6 +786,8 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
         "reasons": reasons,
         "is_valid_food_label": is_valid_food_label,
         "non_food_warning": non_food_warning,
+        "is_blurry": is_blurry,
+        "is_non_food": is_non_food,
         "is_cosmetic": is_cosmetic,
         "detected_cosmetics": detected_cosmetics,
         "detected_additives": detected_additives,
