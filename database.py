@@ -269,24 +269,93 @@ def get_scan_by_id(scan_id):
         return scan
     return None
 
+def claim_device_scans_for_user(user_id, device_id):
+    """
+    Associates any previous anonymous scans made on this device with the user's account.
+    """
+    if not user_id or not device_id:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE scans SET user_id = ? WHERE device_id = ? AND user_id IS NULL", (user_id, device_id))
+    conn.commit()
+    conn.close()
+
+def restore_scans_from_session(scans_list):
+    """
+    Restores or synchronizes scans from session or client storage into the current container SQLite DB.
+    Ensures scans persist across ephemeral serverless micro-VMs on Vercel.
+    """
+    if not scans_list:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    for s in scans_list:
+        if not s or not s.get("product_name"):
+            continue
+        try:
+            cursor.execute("SELECT id FROM scans WHERE id = ?", (s.get("id"),))
+            if cursor.fetchone():
+                continue
+
+            analysis_val = s.get("analysis") or s.get("analysis_result") or {}
+            if isinstance(analysis_val, dict):
+                analysis_json = json.dumps(analysis_val)
+            else:
+                analysis_json = str(analysis_val)
+
+            cursor.execute("""
+            INSERT OR REPLACE INTO scans (
+                id, user_id, device_id, product_name, category, packet_price,
+                servings, cost_per_serving, image_path, raw_text, clean_ingredients,
+                overall_score, star_rating, verdict, verdict_badge, analysis_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                s.get("id"),
+                s.get("user_id"),
+                s.get("device_id"),
+                s.get("product_name"),
+                s.get("category", "General Packaged Food"),
+                s.get("packet_price", 0.0) or 0.0,
+                s.get("servings", 1.0) or 1.0,
+                s.get("cost_per_serving", 0.0) or 0.0,
+                s.get("image_path"),
+                s.get("raw_text", ""),
+                s.get("clean_ingredients", ""),
+                s.get("overall_score", 50) or 50,
+                s.get("star_rating", 2.5) or 2.5,
+                s.get("verdict", "Evaluated"),
+                s.get("verdict_badge", "caution"),
+                analysis_json,
+                s.get("created_at") or datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+            ))
+        except Exception as e:
+            print(f"Error restoring scan: {e}")
+    conn.commit()
+    conn.close()
+
 def get_user_scans(user_id=None, device_id=None, limit=50):
     conn = get_db()
     cursor = conn.cursor()
-    if user_id:
-        # Show ONLY this logged-in user profile's tested foods
+    if user_id and device_id:
+        # Show all scans associated with this user profile OR this physical device
+        cursor.execute("""
+            SELECT * FROM scans 
+            WHERE user_id = ? OR device_id = ? 
+            ORDER BY created_at DESC LIMIT ?
+        """, (user_id, device_id, limit))
+    elif user_id:
         cursor.execute("SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC LIMIT ?", (user_id, limit))
     elif device_id:
-        # Show ONLY this device's tested foods when not logged in
-        cursor.execute("SELECT * FROM scans WHERE user_id IS NULL AND device_id = ? ORDER BY created_at DESC LIMIT ?", (device_id, limit))
+        cursor.execute("SELECT * FROM scans WHERE device_id = ? ORDER BY created_at DESC LIMIT ?", (device_id, limit))
     else:
-        # Neither user nor device specified: never show global or other people's scans
         cursor.execute("SELECT * FROM scans WHERE 1 = 0")
     rows = cursor.fetchall()
     conn.close()
     scans = []
     for r in rows:
         d = dict(r)
-        d['analysis'] = json.loads(d['analysis_json'])
+        d['analysis'] = json.loads(d['analysis_json']) if d.get('analysis_json') else {}
         scans.append(d)
     return scans
 

@@ -18,7 +18,7 @@ import re
 import json
 import base64
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, session, jsonify, g, send_from_directory
@@ -125,6 +125,20 @@ def load_logged_in_user():
         if user and "id" in user:
             session["user_id"] = user["id"]
 
+    # 3. Rehydrate scans from session across serverless micro-VMs
+    if session.get("recent_scans"):
+        try:
+            database.restore_scans_from_session(session.get("recent_scans"))
+        except Exception:
+            pass
+
+    # 4. Associate anonymous device scans if user is authenticated
+    if g.user and hasattr(g, "device_id") and g.device_id:
+        try:
+            database.claim_device_scans_for_user(g.user["id"], g.device_id)
+        except Exception:
+            pass
+
 @app.after_request
 def set_device_cookie(response):
     if hasattr(g, "device_id") and request.cookies.get("device_id") != g.device_id:
@@ -205,9 +219,18 @@ def register():
         )
 
         saved_device_id = session.get("device_id")
+        saved_recent_scans = session.get("recent_scans", [])
         session.clear()
         if saved_device_id:
             session["device_id"] = saved_device_id
+            try:
+                database.claim_device_scans_for_user(user_id, saved_device_id)
+            except Exception:
+                pass
+        if saved_recent_scans:
+            for s in saved_recent_scans:
+                s["user_id"] = user_id
+            session["recent_scans"] = saved_recent_scans
         session["user_id"] = user_id
         session["user_profile"] = {
             "id": user_id,
@@ -241,9 +264,18 @@ def login():
 
         if user and check_password_hash(user["password_hash"], password):
             saved_device_id = session.get("device_id")
+            saved_recent_scans = session.get("recent_scans", [])
             session.clear()
             if saved_device_id:
                 session["device_id"] = saved_device_id
+                try:
+                    database.claim_device_scans_for_user(user["id"], saved_device_id)
+                except Exception:
+                    pass
+            if saved_recent_scans:
+                for s in saved_recent_scans:
+                    s["user_id"] = user["id"]
+                session["recent_scans"] = saved_recent_scans
             session["user_id"] = user["id"]
             session["user_profile"] = {
                 "id": user["id"],
@@ -447,6 +479,32 @@ def scan():
             analysis_dict=analysis
         )
 
+        # Cache scan in signed session cookie for serverless container persistence
+        recent_scans = session.get("recent_scans", [])
+        scan_entry = {
+            "id": scan_id,
+            "user_id": user_id,
+            "device_id": device_id,
+            "product_name": product_name,
+            "category": category,
+            "packet_price": packet_price or 0.0,
+            "servings": servings or 0.0,
+            "cost_per_serving": cost_per_serving,
+            "image_path": primary_image_path,
+            "raw_text": raw_text,
+            "clean_ingredients": analysis["clean_ingredients"],
+            "overall_score": analysis["score"],
+            "star_rating": analysis["star_rating"],
+            "verdict": analysis["verdict"],
+            "verdict_badge": analysis["verdict_badge"],
+            "analysis": analysis,
+            "created_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        recent_scans = [s for s in recent_scans if s.get("id") != scan_id and s.get("product_name") != product_name][:10]
+        recent_scans.insert(0, scan_entry)
+        session["recent_scans"] = recent_scans
+        session.permanent = True
+
         return redirect(url_for("view_scan", scan_id=scan_id))
 
     return render_template("scan.html")
@@ -567,11 +625,40 @@ def analyze_sample():
         analysis_dict=analysis
     )
 
+    # Cache sample analysis in signed session cookie
+    recent_scans = session.get("recent_scans", [])
+    scan_entry = {
+        "id": scan_id,
+        "user_id": user_id,
+        "device_id": device_id,
+        "product_name": target_sample["product_name"],
+        "category": target_sample["category"],
+        "packet_price": target_sample["packet_price"],
+        "servings": target_sample["servings"],
+        "cost_per_serving": cost_per_serving,
+        "image_path": target_sample["image_url"],
+        "raw_text": target_sample["raw_text"],
+        "clean_ingredients": analysis["clean_ingredients"],
+        "overall_score": analysis["score"],
+        "star_rating": analysis["star_rating"],
+        "verdict": analysis["verdict"],
+        "verdict_badge": analysis["verdict_badge"],
+        "analysis": analysis,
+        "created_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    recent_scans = [s for s in recent_scans if s.get("id") != scan_id and s.get("product_name") != target_sample["product_name"]][:10]
+    recent_scans.insert(0, scan_entry)
+    session["recent_scans"] = recent_scans
+    session.permanent = True
+
     return redirect(url_for("view_scan", scan_id=scan_id))
 
 @app.route("/result/<int:scan_id>")
 def view_scan(scan_id):
     scan = database.get_scan_by_id(scan_id)
+    if not scan and session.get("recent_scans"):
+        database.restore_scans_from_session(session.get("recent_scans"))
+        scan = database.get_scan_by_id(scan_id)
     if not scan:
         flash("Record not located.", "danger")
         return redirect(url_for("history"))
@@ -583,6 +670,8 @@ def view_scan(scan_id):
 
 @app.route("/compare")
 def compare():
+    if session.get("recent_scans"):
+        database.restore_scans_from_session(session.get("recent_scans"))
     user_id = g.user["id"] if g.user else None
     device_id = getattr(g, "device_id", None)
     all_scans = database.get_user_scans(user_id=user_id, device_id=device_id, limit=50)
@@ -616,6 +705,9 @@ def compare():
 @app.route("/compare_with/<int:scan_id>")
 def compare_with(scan_id):
     primary = database.get_scan_by_id(scan_id)
+    if not primary and session.get("recent_scans"):
+        database.restore_scans_from_session(session.get("recent_scans"))
+        primary = database.get_scan_by_id(scan_id)
     if not primary:
         return redirect(url_for("compare"))
 
@@ -633,6 +725,8 @@ def compare_with(scan_id):
 
 @app.route("/history")
 def history():
+    if session.get("recent_scans"):
+        database.restore_scans_from_session(session.get("recent_scans"))
     user_id = g.user["id"] if g.user else None
     device_id = getattr(g, "device_id", None)
     scans = database.get_user_scans(user_id=user_id, device_id=device_id)
@@ -643,11 +737,47 @@ def delete_scan_route(scan_id):
     user_id = g.user["id"] if g.user else None
     device_id = getattr(g, "device_id", None)
     deleted = database.delete_scan(scan_id, user_id=user_id, device_id=device_id)
+    recent_scans = session.get("recent_scans", [])
+    if recent_scans:
+        session["recent_scans"] = [s for s in recent_scans if s.get("id") != scan_id]
+        session.permanent = True
     if deleted:
         flash("Record removed from history.", "info")
     else:
         flash("Record could not be removed or record not found.", "danger")
     return redirect(url_for("history"))
+
+@app.route("/api/sync_scans", methods=["POST"])
+def sync_scans():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        client_scans = data.get("scans", [])
+        if not client_scans:
+            return jsonify({"status": "empty", "synced": 0})
+
+        user_id = g.user["id"] if g.user else None
+        device_id = getattr(g, "device_id", None)
+
+        for s in client_scans:
+            if user_id and not s.get("user_id"):
+                s["user_id"] = user_id
+            if device_id and not s.get("device_id"):
+                s["device_id"] = device_id
+
+        database.restore_scans_from_session(client_scans)
+
+        recent = session.get("recent_scans", [])
+        existing_ids = {s.get("id") for s in recent}
+        for s in client_scans:
+            if s.get("id") not in existing_ids:
+                recent.append(s)
+                existing_ids.add(s.get("id"))
+        session["recent_scans"] = recent[:10]
+        session.permanent = True
+
+        return jsonify({"status": "ok", "synced": len(client_scans)})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/guide")
 def guide():

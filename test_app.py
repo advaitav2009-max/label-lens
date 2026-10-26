@@ -526,5 +526,117 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertNotIn(b"Skincare &amp; Cosmetic Chemicals Detected", resp.data)
         self.assertIn(b"Not Recommended / Ultra-Processed", resp.data)
 
+    def test_history_and_compare_persistence_and_rehydration(self):
+        # 1. Anonymous user scans two products
+        tea_text = "Ingredients: Organic Green Tea Leaves, Dandelion Root."
+        r1 = self.client.post("/scan", data={
+            "product_name": "Organic Green Tea",
+            "category": "Beverages & Tea",
+            "packet_price": "250",
+            "servings": "25",
+            "raw_text": tea_text
+        }, follow_redirects=True)
+        self.assertEqual(r1.status_code, 200)
+
+        oats_text = "Ingredients: 100% Whole Grain Rolled Oats, Chia Seeds."
+        r2 = self.client.post("/scan", data={
+            "product_name": "Rolled Oats",
+            "category": "Cereals & Breakfast",
+            "packet_price": "180",
+            "servings": "10",
+            "raw_text": oats_text
+        }, follow_redirects=True)
+        self.assertEqual(r2.status_code, 200)
+
+        # 2. Scans appear in history and compare
+        hist_resp = self.client.get("/history")
+        self.assertEqual(hist_resp.status_code, 200)
+        self.assertIn(b"Organic Green Tea", hist_resp.data)
+        self.assertIn(b"Rolled Oats", hist_resp.data)
+
+        comp_resp = self.client.get("/compare")
+        self.assertEqual(comp_resp.status_code, 200)
+        self.assertIn(b"Organic Green Tea", comp_resp.data)
+        self.assertIn(b"Rolled Oats", comp_resp.data)
+
+        # 3. User registers / logs in; prior scans must persist and be claimed
+        rand_user = f"persist_{uuid.uuid4().hex[:6]}"
+        reg_resp = self.client.post("/register", data={
+            "username": rand_user,
+            "email": f"{rand_user}@example.com",
+            "password": "Password123!",
+            "dietary_preference": "None",
+            "allergies": [],
+            "custom_allergies": "",
+            "health_goals": [],
+            "custom_goals": "",
+            "avoid_items": "",
+            "budget_target": "",
+            "currency": "₹"
+        }, follow_redirects=True)
+        self.assertEqual(reg_resp.status_code, 200)
+
+        hist_logged_in = self.client.get("/history")
+        self.assertIn(b"Organic Green Tea", hist_logged_in.data)
+        self.assertIn(b"Rolled Oats", hist_logged_in.data)
+
+        # 4. Simulate serverless container wipe (wiping SQLite database table)
+        conn = database.get_db()
+        conn.execute("DELETE FROM scans")
+        conn.commit()
+        conn.close()
+
+        # Database is currently empty
+        db_scans = database.get_user_scans()
+        self.assertEqual(len(db_scans), 0)
+
+        # Accessing /history or /compare must automatically rehydrate from session
+        hist_after_wipe = self.client.get("/history")
+        self.assertEqual(hist_after_wipe.status_code, 200)
+        self.assertIn(b"Organic Green Tea", hist_after_wipe.data)
+        self.assertIn(b"Rolled Oats", hist_after_wipe.data)
+
+        comp_after_wipe = self.client.get("/compare")
+        self.assertEqual(comp_after_wipe.status_code, 200)
+        self.assertIn(b"Organic Green Tea", comp_after_wipe.data)
+        self.assertIn(b"Rolled Oats", comp_after_wipe.data)
+
+    def test_sync_scans_api(self):
+        # Test client-side localStorage sync endpoint
+        test_scan = {
+            "id": 9999,
+            "product_name": "Synced Almond Milk",
+            "category": "Dairy & Alternatives",
+            "star_rating": 4.5,
+            "verdict": "Safe & Recommended",
+            "verdict_badge": "safe",
+            "cost_per_serving": 15.0,
+            "packet_price": 150.0,
+            "servings": 10.0,
+            "analysis_result": {
+                "detected_additives": [],
+                "detected_sugars": [],
+                "detected_fats": [],
+                "detected_beneficial": ["Almonds"],
+                "user_allergen_warnings": [],
+                "diet_conflicts": []
+            },
+            "created_at": "2026-10-26 12:00:00"
+        }
+
+        resp = self.client.post(
+            "/api/sync_scans",
+            data=json.dumps({"scans": [test_scan]}),
+            content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["synced"], 1)
+
+        # Check it is present in /history
+        hist_resp = self.client.get("/history")
+        self.assertIn(b"Synced Almond Milk", hist_resp.data)
+
 if __name__ == "__main__":
     unittest.main()

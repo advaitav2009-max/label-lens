@@ -33,6 +33,11 @@
             </span>
           </label>
         {% endfor %}
+        {% if all_scans|length == 0 %}
+          <div style="font-size: 0.85rem; color: var(--text-dim); padding: 0.5rem 0;">
+            No scanned products available to compare yet. Scan products first to build your comparison ledger.
+          </div>
+        {% endif %}
       </div>
     </form>
   </div>
@@ -172,4 +177,31 @@
     </a>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    try {
+      const localScans = JSON.parse(localStorage.getItem("label_lens_scans") || "[]");
+      const serverCount = {{ all_scans|length }};
+
+      if (serverCount === 0 && localScans.length > 0) {
+        fetch("{{ url_for('sync_scans') }}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scans: localScans })
+        }).then(function(res) {
+          return res.json();
+        }).then(function(data) {
+          if (data.synced > 0) {
+            window.location.reload();
+          }
+        }).catch(function(err) {
+          console.error("Compare sync notice:", err);
+        });
+      }
+    } catch(e) {}
+  });
+</script>
 {% endblock %}

@@ -490,6 +490,40 @@
 
 {% block scripts %}
 <script>
+  // Cache scan in client-side localStorage to ensure persistence across serverless micro-VMs
+  (function() {
+    try {
+      const currentScan = {
+        id: {{ scan.id }},
+        user_id: {{ scan.user_id|tojson }},
+        device_id: {{ scan.device_id|tojson }},
+        product_name: {{ scan.product_name|tojson }},
+        category: {{ scan.category|tojson }},
+        packet_price: {{ scan.packet_price or 0.0 }},
+        servings: {{ scan.servings or 1.0 }},
+        cost_per_serving: {{ scan.cost_per_serving or 0.0 }},
+        image_path: {{ scan.image_path|tojson }},
+        raw_text: {{ scan.raw_text|tojson }},
+        clean_ingredients: {{ scan.clean_ingredients|tojson }},
+        overall_score: {{ scan.overall_score }},
+        star_rating: {{ scan.star_rating }},
+        verdict: {{ scan.verdict|tojson }},
+        verdict_badge: {{ scan.verdict_badge|tojson }},
+        analysis: {{ scan.analysis|tojson if scan.analysis else (scan.analysis_json|safe if scan.analysis_json else '{}') }},
+        created_at: {{ scan.created_at|tojson }}
+      };
+      let localScans = JSON.parse(localStorage.getItem("label_lens_scans") || "[]");
+      localScans = localScans.filter(function(s) {
+        return s.id !== currentScan.id && s.product_name !== currentScan.product_name;
+      });
+      localScans.unshift(currentScan);
+      if (localScans.length > 50) localScans = localScans.slice(0, 50);
+      localStorage.setItem("label_lens_scans", JSON.stringify(localScans));
+    } catch (e) {
+      console.error("Local scan storage error:", e);
+    }
+  })();
+
   document.addEventListener("DOMContentLoaded", () => {
     const toggleBtn = document.getElementById("toggle-edit-btn");
     const closeBtn = document.getElementById("close-edit-btn");
