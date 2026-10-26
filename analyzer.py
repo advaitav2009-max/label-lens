@@ -29,6 +29,8 @@ COMMON_FOOD_INDICATORS = [
     "edible", "palm", "sunflower", "groundnut", "peanut", "paste", "puree", "juice",
     "fruit", "curd", "cheese", "sauce", "chilli", "onion", "garlic", "coriander",
     "turmeric", "cumin", "pepper", "cinnamon", "ginger", "clove", "cardamom",
+    "coffee", "creamer", "tea", "candy", "candies", "confectionery", "sweets", "beverage",
+    "caramel", "dextrin", "maltodextrin", "cellulose",
     "servings", "serving size", "net wt", "net weight", "best before",
     "ins", "additive", "thickener", "acidity regulator", "humectant", "raising agent",
     "anti-caking", "anticaking", "leavening", "iodised", "iodized", "vegetable",
@@ -39,8 +41,9 @@ COMMON_FOOD_INDICATORS = [
 ]
 
 # Dedicated Skincare, Makeup, Cosmetic & Non-Food Chemical Indicators
+# Strictly inedible topical chemicals, synthetic polymers, and cosmetic package declarations
 COSMETIC_NON_FOOD_INDICATORS = [
-    # Silicones & Synthetic Polymers
+    # Silicones & Synthetic Polymers (Strictly Inedible)
     "dimethicone", "cyclopentasiloxane", "cyclomethicone", "amodimethicone", "dimethiconol",
     "phenyl trimethicone", "carbomer", "acrylates copolymer", "polyacrylamide", "pvp",
     "polyquaternium", "silica dimethyl silylate", "trimethylsiloxysilicate", "peg-10 dimethicone",
@@ -50,36 +53,30 @@ COSMETIC_NON_FOOD_INDICATORS = [
     "phenoxyethanol", "methylparaben", "propylparaben", "ethylparaben", "butylparaben",
     "paraben", "parabens", "ethylhexylglycerin", "chlorphenesin", "dmdm hydantoin",
     "imidazolidinyl urea", "diazolidinyl urea", "methylisothiazolinone",
-    "methylchloroisothiazolinone", "benzyl alcohol", "dehydroacetic acid",
+    "methylchloroisothiazolinone", "dehydroacetic acid",
 
     # Surfactants & Foaming Agents
     "sodium laureth sulfate", "sodium lauryl sulfate", "sles", "sls",
     "cocamidopropyl betaine", "disodium laureth sulfosuccinate", "sodium cocoyl glycinate",
-    "sodium lauroyl sarcosinate", "ammonium lauryl sulfate", "decyl glucoside",
+    "sodium lauroyl sarcosinate", "ammonium lauryl sulfate",
 
-    # Cosmetic Emulsifiers & Fatty Alcohols
+    # Strictly Cosmetic Emulsifiers & Fatty Alcohols
     "cetearyl alcohol", "cetyl alcohol", "stearyl alcohol", "behenyl alcohol",
-    "ceteareth-20", "ceteareth", "peg-100 stearate", "peg-40", "peg-7",
-    "polysorbate 20", "polysorbate 60", "polysorbate 80", "triethanolamine",
+    "ceteareth-20", "ceteareth", "peg-100 stearate", "triethanolamine",
 
     # Active Skincare Chemicals
-    "niacinamide", "salicylic acid", "glycolic acid", "hyaluronic acid", "sodium hyaluronate",
+    "salicylic acid", "glycolic acid", "hyaluronic acid", "sodium hyaluronate",
     "retinol", "retinyl palmitate", "kojic acid", "benzoyl peroxide", "alpha arbutin",
-    "panthenol", "allantoin", "ceramide",
+    "allantoin", "ceramide",
 
-    # Sunscreen Actives & UV Filters
+    # Sunscreen Actives & Chemical UV Filters
     "avobenzone", "octinoxate", "oxybenzone", "homosalate", "octocrylene", "octisalate",
-    "zinc oxide", "titanium dioxide",
 
     # Makeup Minerals, Synthetic Pigments & Solvents
-    "isododecane", "mica", "synthetic fluorphlogopite", "bismuth oxychloride",
-    "ci 77891", "ci 77491", "ci 77492", "ci 77499", "ci 15850", "ci 45410", "ci 19140", "ci 42090",
-    "ultramarines", "iron oxides",
+    "isododecane", "synthetic fluorphlogopite", "bismuth oxychloride",
 
-    # Chelators, Fragrances & Mineral Petrochemicals
-    "disodium edta", "tetrasodium edta", "edta", "bht", "parfum", "fragrance",
-    "mineral oil", "paraffinum liquidum", "petrolatum", "petroleum jelly",
-    "isopropyl myristate", "caprylic/capric triglyceride", "octyldodecanol",
+    # Petrochemical bases / waxes
+    "paraffinum liquidum", "petrolatum", "petroleum jelly", "isopropyl myristate",
 
     # External Application, Product Types & Packaging Clues
     "for external use only", "external use only", "avoid contact with eyes",
@@ -157,6 +154,11 @@ def clean_and_normalize_text(raw_text):
     text = re.sub(r"\b[1l|]odised\b", "iodised", text, flags=re.IGNORECASE)
     text = re.sub(r"\b[1l|]odized\b", "iodized", text, flags=re.IGNORECASE)
     text = re.sub(r"\bsugar powe(?:r|\.)?", "sugar powder", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bsurset\s*(?:n\s*)?telow\b", "sunset yellow", text, flags=re.IGNORECASE)
+    text = re.sub(r"\balluring\s*red\b", "allura red", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bbright\s*blue\b", "brilliant blue", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bvaktodextrin\b", "maltodextrin", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bghcsse\b", "glucose", text, flags=re.IGNORECASE)
 
     # Isolate ingredients section ONLY if explicit ingredients header is present
     # Avoid matching 'CONTAINS' (which often appears at the end for allergens, cutting off ingredients)
@@ -235,6 +237,19 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
         if num_only:
             normalized_codes.add(num_only)
 
+    # Common name synonyms and lake aliases for food additives
+    ADDITIVE_NAME_ALIASES = {
+        "110": ["sunset yellow", "yellow 6", "sunset yellow fcf", "sunset yellow aluminum lake"],
+        "129": ["allura red", "alluring red", "red 40", "allura red ac", "allura red aluminum lake", "alluring red aluminum lake"],
+        "133": ["brilliant blue", "bright blue", "blue 1", "brilliant blue fcf", "brilliant blue aluminum lake", "bright blue aluminum lake"],
+        "150": ["caramel color", "caramel colour", "caramel colors", "caramel colours", "plain caramel"],
+        "150d": ["caramel iv", "sulfite ammonia caramel", "ammonia sulfite caramel"],
+        "171": ["titanium dioxide", "e171", "ins 171"],
+        "414": ["gum arabic", "acacia gum", "arabic gum", "e414", "ins 414"],
+        "464": ["hydroxypropyl methyl cellulose", "hydroxypropyl methyl", "hpmc", "hydroxypropyl methylcellulose", "e464", "ins 464"],
+        "1521": ["polyethylene glycol", "peg", "e1521", "ins 1521"]
+    }
+
     for code, details in ADDITIVES_CATALOG.items():
         base_code = code.lower()
         matched = False
@@ -243,11 +258,18 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
                 matched = True
                 break
         
+        if not matched and code in ADDITIVE_NAME_ALIASES:
+            for alias in ADDITIVE_NAME_ALIASES[code]:
+                if alias in lower_text:
+                    matched = True
+                    break
+
         if not matched:
             name_parts = details["name"].lower().split("(")
             primary_name = name_parts[0].strip()
-            if primary_name and len(primary_name) > 3 and primary_name in lower_text:
-                matched = True
+            if primary_name and len(primary_name) > 3:
+                if primary_name in lower_text or primary_name.rstrip("s") in lower_text:
+                    matched = True
         
         if matched and code not in seen_additive_keys:
             seen_additive_keys.add(code)
@@ -264,11 +286,18 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
 
     # 2. Detect Added & Hidden Sugars
     detected_sugars = []
-    for sugar in SUGAR_ALIASES:
+    sorted_sugars = sorted(SUGAR_ALIASES, key=len, reverse=True)
+    matched_sugar_spans = []
+    for sugar in sorted_sugars:
         pattern = r"\b" + re.escape(sugar) + r"\b"
-        if re.search(pattern, lower_text):
-            if sugar.title() not in detected_sugars:
-                detected_sugars.append(sugar.title())
+        for m in re.finditer(pattern, lower_text):
+            span = (m.start(), m.end())
+            if any(s[0] <= span[0] and span[1] <= s[1] for s in matched_sugar_spans):
+                continue
+            matched_sugar_spans.append(span)
+            title = sugar.title()
+            if title not in detected_sugars:
+                detected_sugars.append(title)
 
     # 3. Detect Unhealthy & Ultra-Processed Oils / Fats
     detected_fats = []
@@ -520,9 +549,28 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
             if title not in detected_cosmetics:
                 detected_cosmetics.append(title)
 
-    is_cosmetic = len(detected_cosmetics) >= 1
-
     food_word_count = sum(1 for w in COMMON_FOOD_INDICATORS if re.search(r"\b" + re.escape(w) + r"\b", lower_text))
+
+    has_cosmetic_packaging_keyword = any(
+        kw in lower_text for kw in [
+            "for external use only", "external use only", "avoid contact with eyes",
+            "apply on face", "apply to face", "apply on skin", "rinse thoroughly", "massage gently",
+            "dermatologically tested", "dermatologist tested", "ophthalmologist tested",
+            "body wash", "face wash", "body lotion", "moisturizer", "moisturiser", "cleanser",
+            "sunscreen", "shampoo", "conditioner", "sunblock", "serum", "toner", "lip balm",
+            "foundation", "mascara", "eyeliner", "lipstick", "lip gloss", "concealer",
+            "blush", "bronzer", "highlighter", "eyeshadow", "setting spray", "setting powder",
+            "nail polish", "micellar water", "spf 15", "spf 30", "spf 50"
+        ]
+    )
+
+    is_cosmetic = False
+    if has_cosmetic_packaging_keyword:
+        is_cosmetic = True
+    elif len(detected_cosmetics) >= 2 and food_word_count < 3:
+        is_cosmetic = True
+    elif len(detected_cosmetics) >= 1 and food_word_count == 0:
+        is_cosmetic = True
     total_signals = (
         len(detected_additives) +
         len(detected_sugars) +

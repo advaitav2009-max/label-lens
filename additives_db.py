@@ -518,6 +518,33 @@ ADDITIVES_CATALOG = {
         "vegan": True,
         "vegetarian": True,
         "description": "Dark brown coloring made by controlled heating of carbohydrates with ammonia and sulfites. Very prevalent in colas, soy sauces, and bakery items."
+    },
+    "414": {
+        "name": "Acacia Gum / Gum Arabic (INS 414)",
+        "category": "Emulsifier / Stabilizer",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Natural soluble plant fiber exudate from Acacia trees. Functions as a stabilizer, glaze, and binder in confectionery, chewing candies, and soft drinks."
+    },
+    "464": {
+        "name": "Hydroxypropyl Methyl Cellulose (INS 464)",
+        "category": "Thickener / Emulsifier",
+        "risk": "Low",
+        "safety": "safe",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Plant-derived cellulose ether used as an emulsifier, film-former, and stabilizer in confections, baked goods, and gluten-free foods."
+    },
+    "1521": {
+        "name": "Polyethylene Glycol (INS 1521)",
+        "category": "Carrier / Glazing Agent",
+        "risk": "Low-Moderate",
+        "safety": "caution",
+        "vegan": True,
+        "vegetarian": True,
+        "description": "Food-grade polymer carrier and anti-foaming agent used in confectionery coatings, chewing gums, and flavor delivery systems."
     }
 }
 
@@ -525,7 +552,8 @@ ADDITIVES_CATALOG = {
 SUGAR_ALIASES = [
     "sugar", "refined sugar", "cane sugar", "brown sugar", "raw sugar", "beet sugar",
     "high fructose corn syrup", "hfcs", "corn syrup", "corn syrup solids", "invert sugar",
-    "invert syrup", "liquid glucose", "glucose syrup", "glucose-fructose syrup", "dextrose",
+    "invert syrup", "liquid glucose", "glucose syrup", "glucose-fructose syrup", "glucose",
+    "edible glucose", "dextrose",
     "fructose", "maltose", "sucrose", "maltodextrin", "agave nectar", "agave syrup",
     "maple syrup", "molasses", "brown rice syrup", "barley malt", "malt extract",
     "fruit juice concentrate", "concentrated apple juice", "grape juice concentrate",

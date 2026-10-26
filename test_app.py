@@ -493,5 +493,38 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertIsNotNone(rehydrated)
         self.assertEqual(rehydrated["dietary_preference"], "Vegetarian")
 
+    def test_chewing_candy_with_titanium_dioxide_is_edible_food(self):
+        # User inquiry case: Davidoff Chewing Coffee Candy with Titanium Dioxide and food colors
+        candy_text = (
+            "Edible glucose, Non dairy creamer (Ghcsse : syrup, Refined coconut oil), Coffee powder (210%, "
+            "fS Vaktodextrin, Gum arabic, Hydroxypropyl methyl INE lulose, Polyethylene glycol, "
+            "Titanium dioxide S Caramel color, Alluring red aluminum lake, Surset N Telow aluminum Lake, "
+            "Bright blue aluminum lake, Port bon black, edible Flavours. Sorage Place in a cool dry place, "
+            "avoiding directly Snlght or moisture Yendacuring by: AS PER BL Gh Germany . El@ed SERN FTTRE"
+        )
+        res = analyze_food_label(candy_text)
+        self.assertFalse(res["is_cosmetic"])
+        self.assertTrue(res["is_valid_food_label"])
+        detected_names = [a["name"] for a in res["detected_additives"]]
+        self.assertIn("Titanium Dioxide (INS 171)", detected_names)
+        self.assertIn("Sunset Yellow FCF (INS 110 / Yellow 6)", detected_names)
+        self.assertIn("Allura Red AC (INS 129 / Red 40)", detected_names)
+        self.assertNotIn("DO NOT EAT / INEDIBLE", res["eat_recommendation"])
+        self.assertEqual(res["verdict"], "Not Recommended / Ultra-Processed")
+        self.assertEqual(res["verdict_badge"], "avoid")
+
+        # Test via web submission
+        resp = self.client.post("/scan", data={
+            "product_name": "Davidoff Chewing Coffee Candy",
+            "category": "Biscuits & Cookies",
+            "packet_price": "120",
+            "servings": "10",
+            "raw_text": candy_text
+        }, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn(b"Inedible Chemical Formulation", resp.data)
+        self.assertNotIn(b"Skincare &amp; Cosmetic Chemicals Detected", resp.data)
+        self.assertIn(b"Not Recommended / Ultra-Processed", resp.data)
+
 if __name__ == "__main__":
     unittest.main()
