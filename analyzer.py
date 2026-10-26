@@ -657,48 +657,70 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
             "Verify that packaging text was clearly illuminated and within camera bounds."
         ]
     else:
-        score = 75
-
-        for add in detected_additives:
-            if add["safety"] == "avoid":
-                score -= 16
-            elif add["safety"] == "caution":
-                score -= 8
-            elif add["safety"] == "beneficial":
-                score += 6
-
-        sugar_count = len(detected_sugars)
-        if sugar_count >= 3:
-            score -= 18
-        elif sugar_count == 2:
-            score -= 10
-        elif sugar_count == 1:
-            score -= 5
-
         has_palm = any("palm" in f.lower() for f in detected_fats)
         has_trans_fat = any(
             "trans" in f.lower() or "hydrogenated" in f.lower() or "vanaspati" in f.lower()
             for f in detected_fats
         )
 
-        fat_count = len(detected_fats)
-        if has_trans_fat:
-            score -= 22
-        elif has_palm:
-            score -= 16
-        elif fat_count >= 2:
-            score -= 16
-        elif fat_count == 1:
-            score -= 10
+        is_clean_whole_food = (
+            len(detected_additives) == 0 and
+            len(detected_sugars) == 0 and
+            len(detected_fats) == 0 and
+            not has_palm and
+            not has_trans_fat
+        )
 
-        if has_palm or has_trans_fat:
-            # Saturated industrial lipid products must never mask behind wholesome elements
-            score += min(6, len(detected_beneficial) * 2)
-            # HARD CAP on score: products containing palm oil, palmolein, or trans fats
-            # are strictly capped at max 58 (max 2.9 stars, Caution rating)
-            score = min(score, 58)
+        if is_clean_whole_food:
+            # Whole natural foods (e.g. green tea, dandelion root, rolled oats, almonds, milk)
+            # Tiered by pure ingredient brevity (NOVA 1 whole food gold standard)
+            num_ingredients = len(ingredients_list)
+            if num_ingredients <= 3:
+                score = 96
+            elif num_ingredients <= 6:
+                score = 92
+            elif num_ingredients <= 10:
+                score = 88
+            else:
+                score = 84
+
+            # Extra reward for recognized beneficial botanicals, superfoods, whole seeds or nuts
+            score += min(4, len(detected_beneficial) * 2)
+            score = min(98, score)
         else:
-            score += min(20, len(detected_beneficial) * 6)
+            score = 75
+
+            for add in detected_additives:
+                if add["safety"] == "avoid":
+                    score -= 16
+                elif add["safety"] == "caution":
+                    score -= 8
+                elif add["safety"] == "beneficial":
+                    score += 6
+
+            sugar_count = len(detected_sugars)
+            if sugar_count >= 3:
+                score -= 18
+            elif sugar_count == 2:
+                score -= 10
+            elif sugar_count == 1:
+                score -= 5
+
+            fat_count = len(detected_fats)
+            if has_trans_fat:
+                score -= 22
+            elif has_palm:
+                score -= 16
+            elif fat_count >= 2:
+                score -= 16
+            elif fat_count == 1:
+                score -= 10
+
+            if has_palm or has_trans_fat:
+                score += min(6, len(detected_beneficial) * 2)
+                score = min(score, 58)
+            else:
+                score += min(20, len(detected_beneficial) * 6)
 
         if user_allergen_warnings:
             score -= 40
@@ -731,14 +753,18 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
             palm_list = [f for f in detected_fats if "palm" in f.lower() or "trans" in f.lower() or "hydrogenated" in f.lower()]
             fat_label = ", ".join(palm_list) if palm_list else ", ".join(detected_fats)
             eat_recommendation = f"Notice: Contains {fat_label}. Consume in moderation to limit intake of industrial saturated lipids."
+        elif is_clean_whole_food and star_rating >= 4.4:
+            verdict = "Strongly Recommended (100% Pure Formulation)"
+            verdict_badge = "safe"
+            eat_recommendation = "Exceptional whole-food formulation: 100% natural ingredients with zero additives, zero industrial fats, and zero added sugars."
         elif star_rating >= 4.3:
             verdict = "Strongly Recommended"
             verdict_badge = "safe"
-            eat_recommendation = "Suitable for everyday consumption with clean, nutritious ingredients."
+            eat_recommendation = "Wholesome, nutritious formulation made with clean authentic ingredients."
         elif star_rating >= 3.6:
             verdict = "Good Choice / Safe to Eat"
             verdict_badge = "safe"
-            eat_recommendation = "Relatively balanced formulation with minimal chemical processing."
+            eat_recommendation = "Standard formulation with safe everyday culinary ingredients and low chemical additives."
         elif star_rating >= 2.6:
             verdict = "Consume in Moderation"
             verdict_badge = "caution"
@@ -755,28 +781,35 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
             reasons.append(f"Diet Conflict: {diet_conflicts[0]}")
         if avoid_conflicts:
             reasons.append(f"Avoid List Item: Contains {', '.join(avoid_conflicts)}")
-        if has_palm:
-            palm_items = [f for f in detected_fats if "palm" in f.lower()]
-            reasons.append(f"Contains refined industrial lipid: {', '.join(palm_items)} (high saturated fatty acid profile)")
-        elif has_trans_fat:
-            trans_items = [f for f in detected_fats if "trans" in f.lower() or "hydrogenated" in f.lower() or "vanaspati" in f.lower()]
-            reasons.append(f"Contains trans fat risk: {', '.join(trans_items)}")
-        elif detected_fats:
-            reasons.append(f"Contains processed industrial fats: {', '.join(detected_fats[:2])}")
-        if len(detected_sugars) >= 2:
-            reasons.append(f"Contains multiple hidden sugars ({len(detected_sugars)} types)")
-        elif len(detected_sugars) == 1:
-            reasons.append(f"Contains added sweetener: {detected_sugars[0]}")
-        if detected_beneficial and not (has_palm or has_trans_fat):
-            reasons.append(f"Good nutrients inside: {', '.join(detected_beneficial[:3])}")
-        elif detected_beneficial and (has_palm or has_trans_fat) and len(reasons) < 3:
-            reasons.append(f"Contains some wholesome ingredients ({', '.join(detected_beneficial[:2])}), but offset by refined lipids.")
-        if detected_additives:
-            high_risk = [a["name"].split("(")[0].strip() for a in detected_additives if a["safety"] == "avoid"]
-            if high_risk:
-                reasons.append(f"Contains flagged chemical additives: {', '.join(high_risk[:2])}")
-            elif len(reasons) < 3:
-                reasons.append(f"Identified {len(detected_additives)} food additive codes with safety classifications.")
+        if is_clean_whole_food:
+            reasons.append("100% pure whole-food formulation with zero artificial additives, stabilizers, or chemical preservatives.")
+            reasons.append("Naturally free from industrial palm oils, cottonseed lipids, and hydrogenated trans fats.")
+            reasons.append("Free from refined sugars, artificial sweeteners, or synthetic colorings.")
+            if detected_beneficial:
+                reasons.append(f"Contains beneficial botanicals and whole-food ingredients: {', '.join(detected_beneficial[:3])}.")
+        else:
+            if has_palm:
+                palm_items = [f for f in detected_fats if "palm" in f.lower()]
+                reasons.append(f"Contains refined industrial lipid: {', '.join(palm_items)} (high saturated fatty acid profile)")
+            elif has_trans_fat:
+                trans_items = [f for f in detected_fats if "trans" in f.lower() or "hydrogenated" in f.lower() or "vanaspati" in f.lower()]
+                reasons.append(f"Contains trans fat risk: {', '.join(trans_items)}")
+            elif detected_fats:
+                reasons.append(f"Contains processed industrial fats: {', '.join(detected_fats[:2])}")
+            if len(detected_sugars) >= 2:
+                reasons.append(f"Contains multiple hidden sugars ({len(detected_sugars)} types)")
+            elif len(detected_sugars) == 1:
+                reasons.append(f"Contains added sweetener: {detected_sugars[0]}")
+            if detected_beneficial and not (has_palm or has_trans_fat):
+                reasons.append(f"Good nutrients inside: {', '.join(detected_beneficial[:3])}")
+            elif detected_beneficial and (has_palm or has_trans_fat) and len(reasons) < 3:
+                reasons.append(f"Contains some wholesome ingredients ({', '.join(detected_beneficial[:2])}), but offset by refined lipids.")
+            if detected_additives:
+                high_risk = [a["name"].split("(")[0].strip() for a in detected_additives if a["safety"] == "avoid"]
+                if high_risk:
+                    reasons.append(f"Contains flagged chemical additives: {', '.join(high_risk[:2])}")
+                elif len(reasons) < 3:
+                    reasons.append(f"Identified {len(detected_additives)} food additive codes with safety classifications.")
 
         if not reasons:
             reasons.append("Standard packaged food composition with no critical flags.")

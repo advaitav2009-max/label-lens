@@ -415,5 +415,31 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertTrue(res_phy["is_non_food"])
         self.assertEqual(res_phy["verdict"], "Non-Food Content / Unrelated Text")
 
+    def test_clean_whole_food_tea_and_botanicals(self):
+        # User inquiry case: 2 ingredients green tea, dandelion root
+        clean_tea_text = "Ingredients: green tea, dandelion root"
+        res = analyze_food_label(clean_tea_text)
+        
+        self.assertGreaterEqual(res["score"], 95)
+        self.assertGreaterEqual(res["star_rating"], 4.8)
+        self.assertEqual(res["verdict"], "Strongly Recommended (100% Pure Formulation)")
+        self.assertEqual(res["verdict_badge"], "safe")
+        self.assertNotIn("minimal chemical processing", res["eat_recommendation"])
+        self.assertIn("100% natural ingredients", res["eat_recommendation"])
+        self.assertTrue(any("100% pure whole-food" in r for r in res["reasons"]))
+        self.assertIn("Green Tea", res["detected_beneficial"])
+
+        # Web submission test
+        resp = self.client.post("/scan", data={
+            "product_name": "Organic Green Tea",
+            "category": "Juices & Beverages",
+            "packet_price": "180",
+            "servings": "25",
+            "raw_text": "green tea, dandelion root for green tea"
+        }, follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Strongly Recommended (100% Pure Formulation)", resp.data)
+        self.assertNotIn(b"minimal chemical processing", resp.data)
+
 if __name__ == "__main__":
     unittest.main()

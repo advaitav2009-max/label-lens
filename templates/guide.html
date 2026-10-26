@@ -93,6 +93,68 @@
     </div>
   </div>
 
+  <!-- Section 4: Rating Structure & Standards -->
+  <div class="card" style="margin-bottom: 2rem; padding: 2.25rem;">
+    <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.75rem;">
+      4. LabelLens 5-Star Health Rating Structure
+    </h2>
+    <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem;">
+      Ratings are computed algorithmically based on ingredient purity, NOVA processing levels, additive risk classifications, and lipid profiles:
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+      <div style="background-color: var(--bg-surface-elevated); border-left: 4px solid var(--safe-text); padding: 1rem 1.25rem; border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <strong style="color: var(--safe-text); font-size: 0.95rem;">4.5 – 5.0 Stars (Score 90 – 98)</strong>
+          <span class="badge badge-safe">Strongly Recommended (100% Pure Formulation)</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+          100% natural whole foods with zero synthetic additives, zero added sugars, zero industrial fats, and concise natural ingredient lists (e.g. green tea &amp; dandelion root, 100% rolled oats, raw nuts, seeds, fresh milk).
+        </p>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border-left: 4px solid var(--blue-400); padding: 1rem 1.25rem; border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <strong style="color: var(--blue-400); font-size: 0.95rem;">4.0 – 4.4 Stars (Score 80 – 89)</strong>
+          <span class="badge badge-blue">Strongly Recommended</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+          Wholesome multi-ingredient formulations made with authentic culinary ingredients, free from artificial preservatives and industrial trans or palm lipids.
+        </p>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border-left: 4px solid var(--border-blue); padding: 1rem 1.25rem; border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <strong style="color: var(--text-primary); font-size: 0.95rem;">3.5 – 3.9 Stars (Score 70 – 79)</strong>
+          <span class="badge badge-secondary">Good Choice / Safe to Eat</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+          Standard packaged foods with safe everyday culinary leaveners or acidity regulators (e.g. baking soda INS 500, citric acid INS 330) and modest natural sugar or fat.
+        </p>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border-left: 4px solid var(--caution-text); padding: 1rem 1.25rem; border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <strong style="color: var(--caution-text); font-size: 0.95rem;">2.5 – 3.4 Stars (Score 50 – 69)</strong>
+          <span class="badge badge-caution">Consume in Moderation</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+          Contains refined industrial seed oils, palm lipids/palmolein, or multiple sugar synonyms. Any formulation containing palm oil or trans fats is strictly capped at maximum 2.9 stars.
+        </p>
+      </div>
+
+      <div style="background-color: var(--bg-surface-elevated); border-left: 4px solid var(--danger-text); padding: 1rem 1.25rem; border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <strong style="color: var(--danger-text); font-size: 0.95rem;">1.0 – 2.4 Stars (Score 10 – 49)</strong>
+          <span class="badge badge-danger">Not Recommended / Ultra-Processed</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+          Heavy chemical additive load, flagged synthetic dyes (e.g. Tartrazine), hydrogenated trans fats, or high industrial processing markers. Non-food skincare items receive 1.0 star (0 score) as inedible.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <div style="text-align: center; margin-top: 2rem;">
     <a href="{{ url_for('scan') }}" class="btn btn-primary btn-lg">
       Launch Scanner Terminal

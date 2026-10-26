@@ -583,11 +583,16 @@ VEGAN_EXCLUSIONS = NON_VEG_INGREDIENTS + [
 # High Value / Beneficial Nutritious Ingredients
 BENEFICIAL_INGREDIENTS = [
     "whole wheat", "whole grain", "rolled oats", "oat bran", "oats", "chia seeds", "flax seeds",
-    "pumpkin seeds", "sunflower seeds", "almonds", "walnuts", "pistachios", "quinoa",
-    "millet", "ragi", "jowar", "bajra", "lentils", "chickpeas", "mung beans", "dietary fiber",
+    "pumpkin seeds", "sunflower seeds", "almonds", "walnuts", "pistachios", "cashews", "cashew nuts",
+    "quinoa", "millet", "ragi", "jowar", "bajra", "lentils", "chickpeas", "mung beans", "dietary fiber",
     "whey protein isolate", "pea protein", "brown rice protein", "spirulina", "raw cacao",
     "dark cocoa", "turmeric", "curcumin", "ginger", "probiotics", "prebiotics", "inulin",
-    "green tea extract", "ashwagandha", "cold pressed oil", "extra virgin olive oil"
+    "green tea", "green tea extract", "black tea", "white tea", "oolong tea", "matcha",
+    "dandelion root", "dandelion", "chamomile", "peppermint", "tulsi", "holy basil",
+    "moringa", "hibiscus", "lemongrass", "cinnamon", "cardamom", "cloves", "cumin",
+    "coriander", "curry leaves", "fenugreek", "amla", "triphala", "brahmi",
+    "ashwagandha", "cold pressed oil", "extra virgin olive oil", "coconut water", "blueberries",
+    "cranberries", "berries"
 ]
 
 # Category benchmarks for average price per serving (in local currency e.g. INR / USD scaled)
