@@ -24,7 +24,7 @@
         </button>
       </div>
 
-      <div class="chip-grid" style="gap: 0.6rem;">
+      <div id="compare-chips-container" class="chip-grid" style="gap: 0.6rem;">
         {% for item in all_scans %}
           <label class="chip-label">
             <input type="checkbox" name="prod" value="{{ item.id }}" {% if item.id in selected_ids %}checked{% endif %} onchange="this.form.submit()">
@@ -33,11 +33,9 @@
             </span>
           </label>
         {% endfor %}
-        {% if all_scans|length == 0 %}
-          <div style="font-size: 0.85rem; color: var(--text-dim); padding: 0.5rem 0;">
-            No scanned products available to compare yet. Scan products first to build your comparison ledger.
-          </div>
-        {% endif %}
+        <div id="empty-chips-msg" style="font-size: 0.85rem; color: var(--text-dim); padding: 0.5rem 0; {% if all_scans %}display: none;{% endif %}">
+          No scanned products available to compare yet. Scan products first to build your comparison ledger.
+        </div>
       </div>
     </form>
   </div>
@@ -183,40 +181,17 @@
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     try {
-      // 1. Ingest server-rendered scans into local storage
-      const serverScans = [
-        {% for s in all_scans %}
-        {
-          id: {{ s.id }},
-          user_id: {{ s.user_id|tojson }},
-          device_id: {{ s.device_id|tojson }},
-          product_name: {{ s.product_name|tojson }},
-          category: {{ s.category|tojson }},
-          packet_price: {{ s.packet_price or 0.0 }},
-          servings: {{ s.servings or 1.0 }},
-          cost_per_serving: {{ s.cost_per_serving or 0.0 }},
-          image_path: {{ s.image_path|tojson }},
-          raw_text: {{ s.raw_text|tojson }},
-          clean_ingredients: {{ s.clean_ingredients|tojson }},
-          overall_score: {{ s.overall_score }},
-          star_rating: {{ s.star_rating }},
-          verdict: {{ s.verdict|tojson }},
-          verdict_badge: {{ s.verdict_badge|tojson }},
-          analysis: {{ s.analysis|tojson if s.analysis else (s.analysis_json|safe if s.analysis_json else '{}') }},
-          created_at: {{ s.created_at|tojson }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-      ];
-
+      // 1. Ingest server-rendered scans into local storage safely via JSON serialization
+      const serverScans = {{ all_scans|tojson }};
       let localScans = JSON.parse(localStorage.getItem("label_lens_scans") || "[]");
       const deletedIds = JSON.parse(localStorage.getItem("label_lens_deleted_ids") || "[]");
 
-      // Filter out deleted items
-      localScans = localScans.filter(function(s) { return !deletedIds.includes(s.id); });
+      // Filter out deleted items from local storage
+      localScans = localScans.filter(function(s) { return s && s.id && !deletedIds.includes(s.id); });
 
       // Bidirectional merge: absorb server-rendered scans into local storage
       serverScans.forEach(function(ss) {
-        if (!deletedIds.includes(ss.id)) {
+        if (ss && ss.id && !deletedIds.includes(ss.id)) {
           const exists = localScans.some(function(ls) {
             return ls.id === ss.id || (ls.product_name && ss.product_name && ls.product_name.trim().toLowerCase() === ss.product_name.trim().toLowerCase());
           });
@@ -227,6 +202,32 @@
       });
       localStorage.setItem("label_lens_scans", JSON.stringify(localScans));
 
+      const serverRenderedCount = {{ all_scans|length }};
+      const chipsContainer = document.getElementById("compare-chips-container");
+      const emptyChipsMsg = document.getElementById("empty-chips-msg");
+
+      // Immediate Client-Side Fallback: If server returned 0 scans but local storage has scans, populate chips directly
+      if (serverRenderedCount === 0 && localScans.length > 0 && chipsContainer) {
+        if (emptyChipsMsg) emptyChipsMsg.style.display = "none";
+        chipsContainer.innerHTML = "";
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSelected = urlParams.getAll("prod").map(function(v) { return Number(v); });
+
+        localScans.forEach(function(item, idx) {
+          const isChecked = urlSelected.length > 0 ? urlSelected.includes(item.id) : (idx < 4);
+          const ratingStr = (item.star_rating !== undefined && item.star_rating !== null) ? Number(item.star_rating).toFixed(1) : "2.5";
+          const label = document.createElement("label");
+          label.className = "chip-label";
+          label.innerHTML = `
+            <input type="checkbox" name="prod" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="this.form.submit()">
+            <span class="chip-box" style="font-size: 0.82rem;">
+              ${item.product_name || 'Product'} (${ratingStr} / 5.0)
+            </span>
+          `;
+          chipsContainer.appendChild(label);
+        });
+      }
+
       // 2. Synchronize combined ledger back to the current serverless container
       if (localScans.length > 0 || deletedIds.length > 0) {
         fetch("{{ url_for('sync_scans') }}", {
@@ -236,19 +237,17 @@
         }).then(function(res) {
           return res.json();
         }).then(function(data) {
-          // If the container was missing scans and newly restored them, reload once to display them
-          if (data.synced_new > 0) {
-            const reloadKey = "compare_synced_" + localScans.length;
-            if (!sessionStorage.getItem(reloadKey)) {
-              sessionStorage.setItem(reloadKey, "1");
-              window.location.reload();
-            }
+          // If the container was missing scans and newly restored them, reload to display all products in chips and matrix
+          if (data && data.synced_new > 0 && serverRenderedCount < localScans.length) {
+            window.location.reload();
           }
         }).catch(function(err) {
           console.error("Compare sync notice:", err);
         });
       }
-    } catch(e) {}
+    } catch(e) {
+      console.error("Compare sync error:", e);
+    }
   });
 </script>
 {% endblock %}

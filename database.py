@@ -107,9 +107,11 @@ def get_user_by_id(user_id):
     return None
 
 def get_user_by_username(username):
+    if not username:
+        return None
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(?))", (username,))
     row = cursor.fetchone()
     conn.close()
     if row:
@@ -123,9 +125,11 @@ def get_user_by_username(username):
     return None
 
 def get_user_by_email(email):
+    if not email:
+        return None
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    cursor.execute("SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))", (email,))
     row = cursor.fetchone()
     conn.close()
     if row:
@@ -305,11 +309,13 @@ def restore_scans_from_session(scans_list):
             prod_name = str(s.get("product_name", "")).strip()
 
             if scan_id:
-                cursor.execute("SELECT id, product_name FROM scans WHERE id = ?", (scan_id,))
+                cursor.execute("SELECT id, product_name, user_id, device_id FROM scans WHERE id = ?", (scan_id,))
                 existing = cursor.fetchone()
                 if existing:
                     # Same ID and matching product name: already present in container
                     if existing["product_name"].strip().lower() == prod_name.lower():
+                        if s.get("user_id") or s.get("device_id"):
+                            cursor.execute("UPDATE scans SET user_id = COALESCE(user_id, ?), device_id = COALESCE(device_id, ?) WHERE id = ?", (s.get("user_id"), s.get("device_id"), scan_id))
                         continue
                     else:
                         # Legacy ID collision between different products: assign unique ID
@@ -371,9 +377,9 @@ def get_user_scans(user_id=None, device_id=None, limit=50):
     elif user_id:
         cursor.execute("SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC LIMIT ?", (user_id, limit))
     elif device_id:
-        cursor.execute("SELECT * FROM scans WHERE device_id = ? ORDER BY created_at DESC LIMIT ?", (device_id, limit))
+        cursor.execute("SELECT * FROM scans WHERE device_id = ? OR device_id IS NULL ORDER BY created_at DESC LIMIT ?", (device_id, limit))
     else:
-        cursor.execute("SELECT * FROM scans WHERE 1 = 0")
+        cursor.execute("SELECT * FROM scans ORDER BY created_at DESC LIMIT ?", (limit,))
     rows = cursor.fetchall()
     conn.close()
     scans = []

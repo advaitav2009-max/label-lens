@@ -799,5 +799,67 @@ class LabelLensTestCase(unittest.TestCase):
         self.assertEqual(comp.status_code, 200)
         self.assertIn(b"Organic Chamomile Tea", comp.data)
 
+    def test_cosmetic_and_culinary_differentiation(self):
+        # 1. Bread with dough conditioners must NOT be flagged as cosmetic
+        bread_label = "Enriched Wheat Flour, Water, Yeast, Dough Conditioner (Datem, Ascorbic Acid), Salt, Soybean Oil."
+        res_bread = analyze_food_label(bread_label)
+        self.assertTrue(res_bread["is_valid_food_label"])
+        self.assertFalse(res_bread["is_cosmetic"])
+        self.assertFalse(res_bread["non_food_warning"])
+
+        # 2. Coffee candy with titanium dioxide and gum arabic must NOT be flagged as cosmetic
+        candy_label = "Edible glucose, Non dairy creamer (Glucose syrup, Refined coconut oil), Coffee powder 20%, Maltodextrin, Gum arabic, Titanium dioxide, Caramel color, Edible Flavours."
+        res_candy = analyze_food_label(candy_label)
+        self.assertTrue(res_candy["is_valid_food_label"])
+        self.assertFalse(res_candy["is_cosmetic"])
+        self.assertFalse(res_candy["non_food_warning"])
+
+        # 3. Whole culinary spices and teas (dandelion root, green tea, saffron) must have clean score and no non-food warning
+        tea_label = "Ingredients: 100% Organic Green Tea, Dried Dandelion Root, Saffron Threads."
+        res_tea = analyze_food_label(tea_label)
+        self.assertTrue(res_tea["is_valid_food_label"])
+        self.assertFalse(res_tea["is_cosmetic"])
+        self.assertFalse(res_tea["non_food_warning"])
+        self.assertGreaterEqual(res_tea["star_rating"], 4.2)
+
+        # 4. Genuine cosmetic formulations must be flagged correctly
+        cosmetic_label = "Aqua, Sodium Laureth Sulfate, Cocamidopropyl Betaine, Dimethicone, Fragrance, Cetyl Alcohol, Hair Conditioner formulation for damaged hair. For external use only. Apply to wet scalp and rinse thoroughly."
+        res_cosmetic = analyze_food_label(cosmetic_label)
+        self.assertTrue(res_cosmetic["is_cosmetic"])
+        self.assertFalse(res_cosmetic["is_valid_food_label"])
+        self.assertTrue(res_cosmetic["non_food_warning"])
+        self.assertIn("Skincare & Cosmetic", res_cosmetic["verdict"])
+
+    def test_case_insensitive_login_and_sync(self):
+        # Register user with mixed case
+        c_name = f"TestUser_{uuid.uuid4().hex[:4]}"
+        c_pass = "Password123!"
+        reg = self.client.post("/register", data={
+            "username": c_name,
+            "email": f"{c_name.lower()}@testdomain.com",
+            "password": c_pass,
+            "dietary_preference": "Vegetarian",
+            "allergies": ["peanuts"],
+            "custom_allergies": "",
+            "health_goals": ["reduced_sugar"],
+            "custom_goals": "",
+            "avoid_items": "",
+            "budget_target": "50.0",
+            "currency": "₹"
+        }, follow_redirects=True)
+        self.assertEqual(reg.status_code, 200)
+
+        # Log out
+        self.client.get("/logout")
+
+        # Log in with all-lowercase username
+        login_res = self.client.post("/login", data={
+            "username": c_name.lower(),
+            "password": c_pass
+        }, follow_redirects=True)
+        self.assertEqual(login_res.status_code, 200)
+        self.assertNotIn(b"Invalid credentials provided", login_res.data)
+        self.assertIn(b"Sign Out", login_res.data)
+
 if __name__ == "__main__":
     unittest.main()

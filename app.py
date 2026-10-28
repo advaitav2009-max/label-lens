@@ -358,9 +358,7 @@ def login():
                     break
             if matched_profile:
                 database.restore_user_from_session(matched_profile)
-                user = database.get_user_by_username(identifier)
-                if not user:
-                    user = database.get_user_by_email(identifier.lower())
+                user = database.get_user_by_username(identifier) or database.get_user_by_email(identifier.lower()) or matched_profile
 
         if user and check_password_hash(user["password_hash"], password):
             saved_device_id = session.get("device_id")

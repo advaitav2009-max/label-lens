@@ -25,19 +25,23 @@ COMMON_FOOD_INDICATORS = [
     "fats", "carbohydrate", "energy", "calories", "kcal", "malt", "yeast", "spices",
     "masala", "powder", "gum", "lecithin", "sorbate", "benzoate", "gluten", "soy",
     "soya", "seeds", "nuts", "oats", "rice", "corn", "dextrose", "fructose", "glucose",
-    "vitamins", "calcium", "iron", "barley", "maida", "atta",
-    "edible", "palm", "sunflower", "groundnut", "peanut", "paste", "puree", "juice",
-    "fruit", "curd", "cheese", "sauce", "chilli", "onion", "garlic", "coriander",
-    "turmeric", "cumin", "pepper", "cinnamon", "ginger", "clove", "cardamom",
-    "coffee", "creamer", "tea", "candy", "candies", "confectionery", "sweets", "beverage",
-    "caramel", "dextrin", "maltodextrin", "cellulose",
-    "servings", "serving size", "net wt", "net weight", "best before",
+    "vitamins", "calcium", "iron", "barley", "maida", "atta", "besan", "suji", "rava", "poha",
+    "edible", "palm", "sunflower", "groundnut", "peanut", "peanuts", "almond", "almonds",
+    "cashew", "cashews", "walnut", "walnuts", "pistachio", "hazelnut", "coconut", "olive",
+    "sesame", "chia", "flax", "pumpkin", "mustard", "paste", "puree", "juice", "pulp",
+    "fruit", "fruits", "curd", "cheese", "sauce", "chilli", "onion", "garlic", "coriander",
+    "turmeric", "cumin", "pepper", "cinnamon", "ginger", "clove", "cardamom", "saffron",
+    "oregano", "basil", "thyme", "rosemary", "parsley", "mint", "pudina", "tulsi", "tea",
+    "coffee", "creamer", "candy", "candies", "confectionery", "sweets", "beverage", "drink",
+    "caramel", "dextrin", "maltodextrin", "cellulose", "ghee", "honey", "jaggery",
+    "servings", "serving size", "net wt", "net weight", "best before", "mfg date", "expiry",
     "ins", "additive", "thickener", "acidity regulator", "humectant", "raising agent",
     "anti-caking", "anticaking", "leavening", "iodised", "iodized", "vegetable",
-    "hydrolysed", "hydrolyzed", "permitted", "nature identical",
+    "hydrolysed", "hydrolyzed", "permitted", "nature identical", "dough conditioner",
     "sweetener", "seasoning", "condiment", "noodle", "noodles", "biscuit", "biscuits",
-    "cookie", "cookies", "cereal", "wafer", "chocolate", "drink", "snack", "crisps", "chips",
-    "fssai", "mrp"
+    "cookie", "cookies", "cereal", "wafer", "chocolate", "snack", "crisps", "chips",
+    "bread", "bun", "cake", "pasta", "lentil", "lentils", "dal", "bean", "beans", "chickpea",
+    "quinoa", "millet", "makhana", "vinegar", "fssai", "mrp"
 ]
 
 # Dedicated Skincare, Makeup, Cosmetic & Non-Food Chemical Indicators
@@ -45,18 +49,17 @@ COMMON_FOOD_INDICATORS = [
 COSMETIC_NON_FOOD_INDICATORS = [
     # Silicones & Synthetic Polymers (Strictly Inedible)
     "dimethicone", "cyclopentasiloxane", "cyclomethicone", "amodimethicone", "dimethiconol",
-    "phenyl trimethicone", "carbomer", "acrylates copolymer", "polyacrylamide", "pvp",
+    "phenyl trimethicone", "carbomer", "acrylates copolymer", "polyacrylamide",
     "polyquaternium", "silica dimethyl silylate", "trimethylsiloxysilicate", "peg-10 dimethicone",
     "dimethicone crosspolymer", "disteardimonium hectorite",
 
     # Cosmetic Preservatives & Biocides (Strictly Inedible)
-    "phenoxyethanol", "methylparaben", "propylparaben", "ethylparaben", "butylparaben",
-    "paraben", "parabens", "ethylhexylglycerin", "chlorphenesin", "dmdm hydantoin",
-    "imidazolidinyl urea", "diazolidinyl urea", "methylisothiazolinone",
-    "methylchloroisothiazolinone", "dehydroacetic acid",
+    "phenoxyethanol", "butylparaben", "ethylhexylglycerin", "chlorphenesin",
+    "dmdm hydantoin", "imidazolidinyl urea", "diazolidinyl urea",
+    "methylisothiazolinone", "methylchloroisothiazolinone", "dehydroacetic acid",
 
     # Surfactants & Foaming Agents
-    "sodium laureth sulfate", "sodium lauryl sulfate", "sles", "sls",
+    "sodium laureth sulfate", "sodium lauryl sulfate",
     "cocamidopropyl betaine", "disodium laureth sulfosuccinate", "sodium cocoyl glycinate",
     "sodium lauroyl sarcosinate", "ammonium lauryl sulfate",
 
@@ -65,30 +68,24 @@ COSMETIC_NON_FOOD_INDICATORS = [
     "ceteareth-20", "ceteareth", "peg-100 stearate", "triethanolamine",
 
     # Active Skincare Chemicals
-    "salicylic acid", "glycolic acid", "hyaluronic acid", "sodium hyaluronate",
-    "retinol", "retinyl palmitate", "kojic acid", "benzoyl peroxide", "alpha arbutin",
-    "allantoin", "ceramide",
+    "salicylic acid", "glycolic acid", "kojic acid", "benzoyl peroxide", "alpha arbutin",
 
     # Sunscreen Actives & Chemical UV Filters
     "avobenzone", "octinoxate", "oxybenzone", "homosalate", "octocrylene", "octisalate",
 
     # Makeup Minerals, Synthetic Pigments & Solvents
-    "isododecane", "synthetic fluorphlogopite", "bismuth oxychloride",
+    "isododecane", "synthetic fluorphlogopite",
 
     # Petrochemical bases / waxes
-    "paraffinum liquidum", "petrolatum", "petroleum jelly", "isopropyl myristate",
+    "petrolatum", "petroleum jelly", "isopropyl myristate",
 
-    # External Application, Product Types & Packaging Clues
-    "for external use only", "external use only", "avoid contact with eyes",
-    "dermatologically tested", "dermatologist tested", "apply on face", "apply to face",
-    "apply on skin", "massage gently", "rinse thoroughly", "ophthalmologist tested",
-    "non-comedogenic", "hypoallergenic", "shake well before application",
-    "body wash", "face wash", "body lotion", "moisturizer", "moisturiser", "cleanser",
-    "sunscreen", "shampoo", "conditioner", "sunblock", "serum", "toner", "lip balm",
-    "skincare", "skin care", "cosmetic", "foundation", "mascara", "eyeliner", "lipstick",
-    "lip gloss", "concealer", "blush", "bronzer", "highlighter", "eyeshadow",
-    "setting spray", "setting powder", "nail polish", "micellar water",
-    "spf 15", "spf 30", "spf 50"
+    # External Application, Product Types & Explicit Packaging Clues
+    "for external use only", "external use only",
+    "dermatologically tested", "dermatologist tested", "ophthalmologist tested",
+    "body wash", "face wash", "body lotion", "facial cleanser",
+    "sunscreen", "hair conditioner", "sunblock", "face serum", "lip balm",
+    "foundation makeup", "mascara", "eyeliner", "lipstick", "lip gloss",
+    "setting spray", "nail polish", "micellar water"
 ]
 
 COMMON_NON_FOOD_WORDS = [
@@ -550,26 +547,29 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
                 detected_cosmetics.append(title)
 
     food_word_count = sum(1 for w in COMMON_FOOD_INDICATORS if re.search(r"\b" + re.escape(w) + r"\b", lower_text))
-
-    has_cosmetic_packaging_keyword = any(
-        kw in lower_text for kw in [
-            "for external use only", "external use only", "avoid contact with eyes",
-            "apply on face", "apply to face", "apply on skin", "rinse thoroughly", "massage gently",
-            "dermatologically tested", "dermatologist tested", "ophthalmologist tested",
-            "body wash", "face wash", "body lotion", "moisturizer", "moisturiser", "cleanser",
-            "sunscreen", "shampoo", "conditioner", "sunblock", "serum", "toner", "lip balm",
-            "foundation", "mascara", "eyeliner", "lipstick", "lip gloss", "concealer",
-            "blush", "bronzer", "highlighter", "eyeshadow", "setting spray", "setting powder",
-            "nail polish", "micellar water", "spf 15", "spf 30", "spf 50"
-        ]
+    # Exclude metadata/generic chemical headers from actual food substance count
+    NON_SUBSTANCE_WORDS = {
+        "ingredients", "ingredient", "contains", "net wt", "net weight", "servings",
+        "serving size", "iron", "sodium", "fat", "fats", "acid", "flavor", "flavour",
+        "preservative", "emulsifier", "stabilizer", "additive", "permitted", "ins",
+        "energy", "calories", "kcal", "carbohydrate", "mfg date", "best before", "expiry", "mrp"
+    }
+    real_food_substances = sum(
+        1 for w in COMMON_FOOD_INDICATORS
+        if w not in NON_SUBSTANCE_WORDS and re.search(r"\b" + re.escape(w) + r"\b", lower_text)
     )
 
+    has_cosmetic_packaging_keyword = bool(re.search(
+        r"\b(for external use only|external use only|body wash|face wash|body lotion|facial cleanser|hair shampoo|hair conditioner|sunscreen lotion|sunblock spf|face serum|micellar water|liquid lipstick|lipstick|mascara|eyeliner|foundation makeup|setting spray|dermatologically tested|dermatologist tested)\b",
+        lower_text
+    ))
+
     is_cosmetic = False
-    if has_cosmetic_packaging_keyword:
+    if has_cosmetic_packaging_keyword and real_food_substances < 3:
         is_cosmetic = True
-    elif len(detected_cosmetics) >= 2 and food_word_count < 3:
+    elif len(detected_cosmetics) >= 2 and real_food_substances < 3:
         is_cosmetic = True
-    elif len(detected_cosmetics) >= 1 and food_word_count == 0:
+    elif len(detected_cosmetics) >= 1 and has_cosmetic_packaging_keyword:
         is_cosmetic = True
     total_signals = (
         len(detected_additives) +
@@ -591,25 +591,29 @@ def analyze_food_label(raw_text, user_profile=None, packet_price=None, servings=
     if is_cosmetic:
         is_valid_food_label = False
         non_food_warning = True
-    elif len(cleaned_alpha) < 6:
-        # Extremely sparse or featureless OCR fragment from severe blur (e.g. 1-5 letters like 'qaff', '.. - _')
+    elif len(cleaned_alpha) < 5:
+        # Extremely sparse or featureless OCR fragment from severe blur (e.g. 1-4 random characters like 'qaff', '.. - _')
         is_valid_food_label = False
         non_food_warning = True
         is_blurry = True
     elif total_signals == 0:
-        is_valid_food_label = False
-        non_food_warning = True
-
         has_doc_words = any(w in COMMON_NON_FOOD_WORDS for w in words)
         vowel_words = [w for w in words if re.search(r"[aeiouy]", w) and len(w) >= 3]
         vowel_ratio = len(vowel_words) / max(1, len(words))
 
-        # Only classify as blurry if OCR yielded severe motion-blur consonant noise with virtually zero vowels (<0.15)
-        # Never nag user to retake if characters form pronounceable words or sentences
-        if not has_doc_words and vowel_ratio < 0.15 and len(cleaned_alpha) < 20:
+        # Only classify as non-food if explicit non-food words are present
+        if has_doc_words:
+            is_valid_food_label = False
+            non_food_warning = True
+            is_non_food = True
+        elif vowel_ratio < 0.15 and len(cleaned_alpha) < 20:
+            is_valid_food_label = False
+            non_food_warning = True
             is_blurry = True
         else:
-            is_non_food = True
+            # Characters form words with no non-food document terms: evaluate as clean natural formulation
+            is_valid_food_label = True
+            non_food_warning = False
 
     # 10. Calculate Budget & Serving Value (Optional Handling)
     price = None
